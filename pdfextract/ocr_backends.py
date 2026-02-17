@@ -299,6 +299,11 @@ _BACKENDS: dict[str, type[OcrBackend]] = {
     VllmOcrBackend.name: VllmOcrBackend,
 }
 
+# Instance cache: backends with no kwargs are reused across calls.
+# This avoids reloading ONNX models (RapidOCR) or reconnecting HTTP clients
+# on every page when the same backend+options combination is used.
+_INSTANCE_CACHE: dict[str, OcrBackend] = {}
+
 
 def available_ocr_backends() -> tuple[str, ...]:
     """Return supported OCR backend names."""
@@ -306,12 +311,23 @@ def available_ocr_backends() -> tuple[str, ...]:
 
 
 def create_ocr_backend(name: str = "rapidocr", **kwargs: Any) -> OcrBackend:
-    """Create an OCR backend instance by registry name."""
+    """Return an OCR backend instance by registry name.
+
+    Instances are cached by name when no kwargs are provided, so repeated
+    calls for the same no-config backend (e.g. "rapidocr") reuse the same
+    object and avoid reloading ONNX models on every page.
+    """
     backend_name = name.strip().lower()
     backend_cls = _BACKENDS.get(backend_name)
     if backend_cls is None:
         available = ", ".join(available_ocr_backends())
         raise ValueError(f"Unknown OCR backend '{name}'. Available backends: {available}")
+    if not kwargs:
+        cached = _INSTANCE_CACHE.get(backend_name)
+        if cached is None:
+            cached = backend_cls()
+            _INSTANCE_CACHE[backend_name] = cached
+        return cached
     return backend_cls(**kwargs)
 
 

@@ -23,7 +23,6 @@ import time
 from collections.abc import Callable, Mapping
 from typing import Any
 
-
 _LOG = logging.getLogger("langextract.debug")
 
 # Add NullHandler to prevent "No handler found" warnings

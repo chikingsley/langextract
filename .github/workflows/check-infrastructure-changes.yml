@@ -45,7 +45,6 @@ jobs:
               file.filename === 'tox.ini' ||
               file.filename === '.pre-commit-config.yaml' ||
               file.filename === 'Dockerfile' ||
-              file.filename === 'autoformat.sh' ||
               file.filename === '.gitignore' ||
               file.filename === 'CONTRIBUTING.md' ||
               file.filename === 'LICENSE' ||
@@ -79,18 +78,18 @@ jobs:
                       `Only repository maintainers are allowed to modify infrastructure files (including \`.github/\`, build configuration, and repository documentation).\n\n` +
                       `**Note**: If these are only formatting changes, please:\n` +
                       `1. Revert changes to \`.github/\` files\n` +
-                      `2. Use \`./autoformat.sh\` to format only source code directories\n` +
+                      `2. Use \`ruff format langextract tests\` and \`ruff check --fix langextract tests\` to format source code only\n` +
                       `3. Avoid running formatters on infrastructure files\n\n` +
                       `If structural changes are necessary:\n` +
                       `1. Open an issue describing the needed infrastructure changes\n` +
                       `2. A maintainer will review and implement the changes if approved\n\n` +
-                      `For more information, see our [Contributing Guidelines](https://github.com/google/langextract/blob/main/CONTRIBUTING.md).`
+                      `For more information, see our repository README.`
               });
 
               core.setFailed(
                 `This PR modifies ${infrastructureFiles.length} protected infrastructure file(s). ` +
                 `Only maintainers can modify these files. ` +
-                `Use ./autoformat.sh to format code without touching infrastructure.`
+                `Use ruff format/check on source directories without touching infrastructure files.`
               );
             } else if (infrastructureFiles.length > 0 && isMaintainer) {
               core.info(`PR modifies ${infrastructureFiles.length} infrastructure file(s) - allowed for maintainer ${prAuthor}`);

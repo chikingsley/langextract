@@ -21,36 +21,36 @@ from langextract.core import data
 
 class PromptAlignmentValidationTest(parameterized.TestCase):
     @parameterized.named_parameters(
-        dict(
-            testcase_name="exact_alignment",
-            text="Patient takes lisinopril.",
-            extraction_class="Medication",
-            extraction_text="lisinopril",
-            expected_issues=0,
-            expected_has_failed=False,
-            expected_has_non_exact=False,
-            expected_alignment_status=None,
-        ),
-        dict(
-            testcase_name="fuzzy_match_lesser",
-            text="Type 2 diabetes.",
-            extraction_class="Diagnosis",
-            extraction_text="type-2 diabetes",
-            expected_issues=1,
-            expected_has_failed=False,
-            expected_has_non_exact=True,
-            expected_alignment_status=data.AlignmentStatus.MATCH_LESSER,
-        ),
-        dict(
-            testcase_name="extraction_not_found",
-            text="No medications mentioned in this text.",
-            extraction_class="Medication",
-            extraction_text="lisinopril",
-            expected_issues=1,
-            expected_has_failed=True,
-            expected_has_non_exact=False,
-            expected_alignment_status=None,
-        ),
+        {
+            "testcase_name": "exact_alignment",
+            "text": "Patient takes lisinopril.",
+            "extraction_class": "Medication",
+            "extraction_text": "lisinopril",
+            "expected_issues": 0,
+            "expected_has_failed": False,
+            "expected_has_non_exact": False,
+            "expected_alignment_status": None,
+        },
+        {
+            "testcase_name": "fuzzy_match_lesser",
+            "text": "Type 2 diabetes.",
+            "extraction_class": "Diagnosis",
+            "extraction_text": "type-2 diabetes",
+            "expected_issues": 1,
+            "expected_has_failed": False,
+            "expected_has_non_exact": True,
+            "expected_alignment_status": data.AlignmentStatus.MATCH_LESSER,
+        },
+        {
+            "testcase_name": "extraction_not_found",
+            "text": "No medications mentioned in this text.",
+            "extraction_class": "Medication",
+            "extraction_text": "lisinopril",
+            "expected_issues": 1,
+            "expected_has_failed": True,
+            "expected_has_non_exact": False,
+            "expected_alignment_status": None,
+        },
     )
     def test_alignment_detection(
         self,
@@ -90,32 +90,32 @@ class PromptAlignmentValidationTest(parameterized.TestCase):
                 self.assertIsNotNone(issue.alignment_status)
 
     @parameterized.named_parameters(
-        dict(
-            testcase_name="one_fails",
-            text="Patient takes lisinopril and has diabetes mellitus.",
-            extractions=[
+        {
+            "testcase_name": "one_fails",
+            "text": "Patient takes lisinopril and has diabetes mellitus.",
+            "extractions": [
                 ("Medication", "lisinopril"),  # PASSES - found exactly
                 ("Diagnosis", "diabetes"),  # PASSES - found exactly
                 ("Medication", "metformin"),  # FAILS - not in text
             ],
-            expected_issues=1,
-            expected_has_failed=True,
-            expected_has_non_exact=False,
-            expected_failed_text="metformin",
-        ),
-        dict(
-            testcase_name="all_pass",
-            text="Patient takes lisinopril and aspirin for diabetes management.",
-            extractions=[
+            "expected_issues": 1,
+            "expected_has_failed": True,
+            "expected_has_non_exact": False,
+            "expected_failed_text": "metformin",
+        },
+        {
+            "testcase_name": "all_pass",
+            "text": "Patient takes lisinopril and aspirin for diabetes management.",
+            "extractions": [
                 ("Medication", "lisinopril"),
                 ("Medication", "aspirin"),
                 ("Diagnosis", "diabetes"),
             ],
-            expected_issues=0,
-            expected_has_failed=False,
-            expected_has_non_exact=False,
-            expected_failed_text=None,
-        ),
+            "expected_issues": 0,
+            "expected_has_failed": False,
+            "expected_has_non_exact": False,
+            "expected_failed_text": None,
+        },
     )
     def test_multiple_extractions_per_example(
         self,
@@ -151,20 +151,20 @@ class PromptAlignmentValidationTest(parameterized.TestCase):
             self.assertEqual(issue.extraction_text_preview, expected_failed_text)
 
     @parameterized.named_parameters(
-        dict(
-            testcase_name="warning_mode_with_failed",
-            text="Patient has no known allergies.",
-            extraction_text="penicillin",
-            validation_level=prompt_validation.PromptValidationLevel.WARNING,
-            strict_non_exact=False,
-        ),
-        dict(
-            testcase_name="off_mode_with_failed",
-            text="Patient history incomplete.",
-            extraction_text="aspirin",
-            validation_level=prompt_validation.PromptValidationLevel.OFF,
-            strict_non_exact=False,
-        ),
+        {
+            "testcase_name": "warning_mode_with_failed",
+            "text": "Patient has no known allergies.",
+            "extraction_text": "penicillin",
+            "validation_level": prompt_validation.PromptValidationLevel.WARNING,
+            "strict_non_exact": False,
+        },
+        {
+            "testcase_name": "off_mode_with_failed",
+            "text": "Patient history incomplete.",
+            "extraction_text": "aspirin",
+            "validation_level": prompt_validation.PromptValidationLevel.OFF,
+            "strict_non_exact": False,
+        },
     )
     def test_validation_levels_that_dont_raise(
         self, text, extraction_text, validation_level, strict_non_exact
@@ -189,22 +189,22 @@ class PromptAlignmentValidationTest(parameterized.TestCase):
         )
 
     @parameterized.named_parameters(
-        dict(
-            testcase_name="error_mode_failed_alignment",
-            text="Patient has no known allergies.",
-            extraction_class="Medication",
-            extraction_text="penicillin",
-            strict_non_exact=False,
-            error_pattern=r"1 extraction\(s\).*could not be aligned",
-        ),
-        dict(
-            testcase_name="error_mode_strict_fuzzy_match",
-            text="Type 2 diabetes.",
-            extraction_class="Diagnosis",
-            extraction_text="type-2 diabetes",
-            strict_non_exact=True,
-            error_pattern=r"strict mode.*1 non-exact",
-        ),
+        {
+            "testcase_name": "error_mode_failed_alignment",
+            "text": "Patient has no known allergies.",
+            "extraction_class": "Medication",
+            "extraction_text": "penicillin",
+            "strict_non_exact": False,
+            "error_pattern": r"1 extraction\(s\).*could not be aligned",
+        },
+        {
+            "testcase_name": "error_mode_strict_fuzzy_match",
+            "text": "Type 2 diabetes.",
+            "extraction_class": "Diagnosis",
+            "extraction_text": "type-2 diabetes",
+            "strict_non_exact": True,
+            "error_pattern": r"strict mode.*1 non-exact",
+        },
     )
     def test_error_mode_raises_appropriately(
         self,
@@ -321,28 +321,28 @@ class PromptAlignmentValidationTest(parameterized.TestCase):
         self.assertIsNone(getattr(original_extraction, "alignment_status", None))
 
     @parameterized.named_parameters(
-        dict(
-            testcase_name="fuzzy_disabled_rejects_non_exact",
-            text="Patient has type 2 diabetes.",
-            extraction_class="Diagnosis",
-            extraction_text="Type-2 Diabetes",
-            enable_fuzzy=False,
-            accept_lesser=False,
-            fuzzy_threshold=0.75,
-            expected_has_failed=True,
-            expected_has_non_exact=False,
-        ),
-        dict(
-            testcase_name="fuzzy_enabled_accepts_close_match",
-            text="Patient has type 2 diabetes.",
-            extraction_class="Diagnosis",
-            extraction_text="Type-2 Diabetes",
-            enable_fuzzy=True,
-            accept_lesser=False,
-            fuzzy_threshold=0.75,
-            expected_has_failed=False,
-            expected_has_non_exact=True,
-        ),
+        {
+            "testcase_name": "fuzzy_disabled_rejects_non_exact",
+            "text": "Patient has type 2 diabetes.",
+            "extraction_class": "Diagnosis",
+            "extraction_text": "Type-2 Diabetes",
+            "enable_fuzzy": False,
+            "accept_lesser": False,
+            "fuzzy_threshold": 0.75,
+            "expected_has_failed": True,
+            "expected_has_non_exact": False,
+        },
+        {
+            "testcase_name": "fuzzy_enabled_accepts_close_match",
+            "text": "Patient has type 2 diabetes.",
+            "extraction_class": "Diagnosis",
+            "extraction_text": "Type-2 Diabetes",
+            "enable_fuzzy": True,
+            "accept_lesser": False,
+            "fuzzy_threshold": 0.75,
+            "expected_has_failed": False,
+            "expected_has_non_exact": True,
+        },
     )
     def test_alignment_policies(
         self,

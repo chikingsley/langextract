@@ -20,10 +20,9 @@ management in build systems.
 """
 
 import importlib
+import logging
 import os
 from importlib import metadata
-
-import logging
 
 from langextract.providers import builtin_registry, router
 
@@ -38,8 +37,8 @@ __all__ = [
 ]
 
 # Track provider loading for lazy initialization
-_plugins_loaded = False
-_builtins_loaded = False
+_plugins_loaded: bool = False
+_builtins_loaded: bool = False
 
 
 def load_builtins_once() -> None:
@@ -145,10 +144,10 @@ def __getattr__(name: str):
     """Lazy loading for submodules."""
     if name == "router":
         return importlib.import_module("langextract.providers.router")
-    elif name == "schemas":
+    if name == "schemas":
         return importlib.import_module("langextract.providers.schemas")
-    elif name == "_plugins_loaded":
+    if name == "_plugins_loaded":
         return _plugins_loaded
-    elif name == "_builtins_loaded":
+    if name == "_builtins_loaded":
         return _builtins_loaded
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

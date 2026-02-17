@@ -29,9 +29,9 @@ class DataLibToDictParameterizedTest(parameterized.TestCase):
     """
 
     @parameterized.named_parameters(
-        dict(
-            testcase_name="single_extraction_no_token_interval",
-            annotated_doc=data.AnnotatedDocument(
+        {
+            "testcase_name": "single_extraction_no_token_interval",
+            "annotated_doc": data.AnnotatedDocument(
                 document_id="docA",
                 text="Just a short sentence.",
                 extractions=[
@@ -43,7 +43,7 @@ class DataLibToDictParameterizedTest(parameterized.TestCase):
                     ),
                 ],
             ),
-            expected_dict={
+            "expected_dict": {
                 "document_id": "docA",
                 "extractions": [
                     {
@@ -59,10 +59,10 @@ class DataLibToDictParameterizedTest(parameterized.TestCase):
                 ],
                 "text": "Just a short sentence.",
             },
-        ),
-        dict(
-            testcase_name="multiple_extractions_with_token_interval",
-            annotated_doc=data.AnnotatedDocument(
+        },
+        {
+            "testcase_name": "multiple_extractions_with_token_interval",
+            "annotated_doc": data.AnnotatedDocument(
                 document_id="docB",
                 text="Patient Jane reported a headache.",
                 extractions=[
@@ -85,7 +85,7 @@ class DataLibToDictParameterizedTest(parameterized.TestCase):
                     ),
                 ],
             ),
-            expected_dict={
+            "expected_dict": {
                 "document_id": "docB",
                 "extractions": [
                     {
@@ -111,10 +111,10 @@ class DataLibToDictParameterizedTest(parameterized.TestCase):
                 ],
                 "text": "Patient Jane reported a headache.",
             },
-        ),
-        dict(
-            testcase_name="extraction_with_attributes_and_token_interval",
-            annotated_doc=data.AnnotatedDocument(
+        },
+        {
+            "testcase_name": "extraction_with_attributes_and_token_interval",
+            "annotated_doc": data.AnnotatedDocument(
                 document_id="docC",
                 text="He has mild chest pain and a cough.",
                 extractions=[
@@ -141,7 +141,7 @@ class DataLibToDictParameterizedTest(parameterized.TestCase):
                     ),
                 ],
             ),
-            expected_dict={
+            "expected_dict": {
                 "document_id": "docC",
                 "extractions": [
                     {
@@ -170,7 +170,7 @@ class DataLibToDictParameterizedTest(parameterized.TestCase):
                 ],
                 "text": "He has mild chest pain and a cough.",
             },
-        ),
+        },
     )
     def test_annotated_document_to_dict(self, annotated_doc, expected_dict):
         actual_dict = data_lib.annotated_document_to_dict(annotated_doc)

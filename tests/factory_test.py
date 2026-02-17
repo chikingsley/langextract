@@ -222,9 +222,10 @@ class FactoryTest(absltest.TestCase):
     def test_model_config_fields_are_immutable(self):
         """ModelConfig fields should not be modifiable after creation."""
         config = factory.ModelConfig(model_id="gemini-pro", provider_kwargs={"api_key": "test"})
+        field_name = "model_id"
 
         with self.assertRaises(AttributeError):
-            config.model_id = "different"
+            setattr(config, field_name, "different")
 
     def test_model_config_allows_dict_contents_modification(self):
         """ModelConfig allows modification of dict contents (not deeply frozen)."""

@@ -16,11 +16,13 @@
 
 
 import abc
-from collections.abc import Sequence
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from langextract.core import data, types
 from langextract.core import format_handler as fh
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 __all__ = [
     "BaseSchema",
@@ -74,7 +76,7 @@ class BaseSchema(abc.ABC):
           format_handler: The format configuration to validate.
         """
         del format_handler
-        return None
+        return
 
     def sync_with_provider_kwargs(self, kwargs: dict[str, Any]) -> None:
         """Hook to update schema state based on provider kwargs.
@@ -90,7 +92,7 @@ class BaseSchema(abc.ABC):
           kwargs: The effective provider kwargs after merging.
         """
         del kwargs
-        return None
+        return
 
 
 class FormatModeSchema(BaseSchema):

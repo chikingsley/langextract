@@ -22,10 +22,9 @@ providers to be registered without importing their dependencies until needed.
 import dataclasses
 import functools
 import importlib
+import logging
 import re
 import typing
-
-import logging
 
 from langextract.core import base_model, exceptions
 

@@ -15,9 +15,9 @@
 """Helper functions for benchmark text retrieval and analysis."""
 
 import subprocess
-from typing import Any
 import urllib.error
 import urllib.request
+from typing import Any
 
 from benchmarks import config
 from langextract.core import tokenizer
@@ -176,10 +176,9 @@ def analyze_tokenization(
   Returns:
     Dictionary with tokenization metrics.
   """
-  if tokenizer_inst:
-    tokenized = tokenizer_inst.tokenize(text)
-  else:
-    tokenized = tokenizer.tokenize(text)
+  tokenized = (
+      tokenizer_inst.tokenize(text) if tokenizer_inst else tokenizer.tokenize(text)
+  )
   num_tokens = len(tokenized.tokens)
   num_chars = len(text)
   tokens_per_char = num_tokens / num_chars if num_chars > 0 else 0

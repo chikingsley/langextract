@@ -22,15 +22,19 @@ inline batch API. It handles:
 - Order preservation across batch processing
 """
 
+from __future__ import annotations
+
 import dataclasses
 import logging
 import time
-from collections.abc import Callable, Sequence
-from typing import Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
 
 from google import genai
 
 from langextract.core import exceptions
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Sequence
 
 _UNSET = object()
 
@@ -165,12 +169,11 @@ def _submit_inline(
     Returns:
       BatchJob object that can be polled for completion.
     """
-    job = client.batches.create(
+    return client.batches.create(
         model=model_id,
         src=list(requests),
         config=genai.types.CreateBatchJobConfig(display_name=display),
     )
-    return job
 
 
 class _TextResponse(Protocol):
@@ -345,7 +348,12 @@ def infer_batch(
         return []
 
     # Suppress verbose HTTP logs
-    for logger_name in ("google.auth.transport.requests", "urllib3.connectionpool", "httpx", "httpcore"):
+    for logger_name in (
+        "google.auth.transport.requests",
+        "urllib3.connectionpool",
+        "httpx",
+        "httpcore",
+    ):
         logging.getLogger(logger_name).setLevel(logging.WARNING)
 
     logging.info("Batch API: Processing %d prompts", len(prompts))
@@ -373,7 +381,10 @@ def infer_batch(
 
         results = _extract_inline_results(job, cfg, expected_count=len(requests))
 
-        return {orig_idx: result for (orig_idx, _), result in zip(batch_items, results, strict=True)}
+        return {
+            orig_idx: result
+            for (orig_idx, _), result in zip(batch_items, results, strict=True)
+        }
 
     all_items = list(enumerate(prompts))
     new_results: dict[int, tuple[str, dict[str, int] | None]] = {}

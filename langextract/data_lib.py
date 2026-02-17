@@ -18,10 +18,12 @@
 import dataclasses
 import enum
 import numbers
-from collections.abc import Iterable, Mapping
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from langextract.core import data, tokenizer
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable, Mapping
 
 
 def enum_asdict_factory(items: Iterable[tuple[str, Any]]) -> dict[str, Any]:

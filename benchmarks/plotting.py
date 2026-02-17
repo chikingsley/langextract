@@ -18,16 +18,20 @@ Creates multi-panel plots showing tokenization performance, extraction metrics,
 and cross-language comparisons.
 """
 
-from datetime import datetime
-import json
-from pathlib import Path
-from typing import Any
+from __future__ import annotations
 
-import matplotlib
+import json
+from datetime import datetime
+from typing import TYPE_CHECKING, Any
+
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 from benchmarks import config
 
-matplotlib.use("Agg")
+if TYPE_CHECKING:
+  from pathlib import Path
+
+mpl.use("Agg")
 plt.style.use(config.DISPLAY.plot_style)
 
 
@@ -74,7 +78,7 @@ def create_diverse_plots(results: dict[str, Any], filepath: Path) -> bool:
     print(f"Plot saved to: {plot_path}")
     return True
 
-  except (IOError, OSError) as e:
+  except OSError as e:
     print(f"Warning: Could not create benchmark plot: {e}")
     return False
 
@@ -105,7 +109,7 @@ def _plot_tokenization_throughput(ax, results):
   ax.set_yticks(y_ticks)
   ax.set_yticklabels([f"{int(y/1000)}K" if y > 0 else "0" for y in y_ticks])
 
-  for x, y in zip(sizes, speeds):
+  for x, y in zip(sizes, speeds, strict=True):
     label = f"{y/1000:.0f}K"
     ax.annotate(
         label,
@@ -146,7 +150,7 @@ def _plot_tokenization_rate(ax, results):
   x = list(range(len(text_types)))
   bars = ax.bar(x, tok_per_char, color="#2196f3", alpha=0.7)
 
-  for bar_rect, val in zip(bars, tok_per_char):
+  for bar_rect, val in zip(bars, tok_per_char, strict=True):
     ax.text(
         bar_rect.get_x() + bar_rect.get_width() / 2,
         val + 0.005,
@@ -197,7 +201,7 @@ def _plot_extraction_density(ax, results):
   x = list(range(len(text_types)))
   bars = ax.bar(x, densities, color="#4caf50", alpha=0.7)
 
-  for bar_rect, val in zip(bars, densities):
+  for bar_rect, val in zip(bars, densities, strict=True):
     ax.text(
         bar_rect.get_x() + bar_rect.get_width() / 2,
         val,
@@ -247,7 +251,7 @@ def _plot_processing_speed(ax, results):
   x = list(range(len(text_types)))
   bars = ax.bar(x, speeds, color="#ff9800", alpha=0.7)
 
-  for bar_rect, val in zip(bars, speeds):
+  for bar_rect, val in zip(bars, speeds, strict=True):
     ax.text(
         bar_rect.get_x() + bar_rect.get_width() / 2,
         val,
@@ -329,11 +333,11 @@ def create_comparison_plots(json_files: list[Path], output_path: Path) -> None:
   all_results = []
   for json_file in json_files:
     try:
-      with open(json_file, "r") as f:
+      with json_file.open(encoding="utf-8") as f:
         data = json.load(f)
         data["filename"] = json_file.stem
         all_results.append(data)
-    except (IOError, OSError, json.JSONDecodeError) as e:
+    except (OSError, json.JSONDecodeError) as e:
       print(f"Error loading {json_file}: {e}")
       continue
 
@@ -381,7 +385,7 @@ def _plot_entity_comparison(ax, all_results):
     run_name = result["filename"].replace("benchmark_", "")[:10]
     runs.append(run_name)
 
-    run_counts = {lang: 0 for lang in languages}
+    run_counts = dict.fromkeys(languages, 0)
     if config.RESULTS_KEY in result:
       for res in result[config.RESULTS_KEY]:
         lang = res.get("text_type", "")
@@ -397,7 +401,7 @@ def _plot_entity_comparison(ax, all_results):
     counts = [data[lang] for data in language_data]
     bars = ax.bar([v + i * width for v in x], counts, width, label=lang.capitalize())
 
-    for bar_rect, count in zip(bars, counts):
+    for bar_rect, count in zip(bars, counts, strict=True):
       if count > 0:
         ax.text(
             bar_rect.get_x() + bar_rect.get_width() / 2,
@@ -473,7 +477,7 @@ def _plot_time_comparison(ax, all_results):
   ax.set_xticklabels(runs, rotation=45, ha="right")
   ax.grid(True, alpha=0.3)
 
-  for bar_rect, time in zip(bars, avg_times):
+  for bar_rect, time in zip(bars, avg_times, strict=True):
     if time > 0:
       ax.text(
           bar_rect.get_x() + bar_rect.get_width() / 2,
@@ -493,7 +497,7 @@ def _plot_tokenization_comparison(ax, all_results):
   for i, result in enumerate(all_results):
     run_name = result["filename"].replace("benchmark_", "")[:10]
 
-    if config.TOKENIZATION_KEY in result and result[config.TOKENIZATION_KEY]:
+    if result.get(config.TOKENIZATION_KEY):
       sizes = [r["words"] for r in result[config.TOKENIZATION_KEY]]
       speeds = [r["tokens_per_sec"] for r in result[config.TOKENIZATION_KEY]]
 
@@ -507,7 +511,7 @@ def _plot_tokenization_comparison(ax, all_results):
           alpha=0.8,
       )
 
-      for x, y in zip(sizes, speeds):
+      for x, y in zip(sizes, speeds, strict=True):
         if i == 0:  # Only label first run to avoid overlap
           label = f"{y/1000:.0f}K"
           ax.annotate(
@@ -591,7 +595,7 @@ def _plot_success_rate_comparison(ax, all_results):
   ax.axhline(y=100, color="green", linestyle="--", alpha=0.3)
   ax.grid(True, alpha=0.3)
 
-  for bar_rect, rate in zip(bars, success_rates):
+  for bar_rect, rate in zip(bars, success_rates, strict=True):
     ax.text(
         bar_rect.get_x() + bar_rect.get_width() / 2,
         bar_rect.get_height() + 1,
@@ -633,10 +637,10 @@ def _plot_token_rate_by_language(ax, all_results):
   ax.set_ylabel("Tokens per Character")
   ax.set_title("Tokenization Density (Latest Run)")
   ax.set_xticks(range(len(languages)))
-  ax.set_xticklabels([l.capitalize() for l in languages])
+  ax.set_xticklabels([language.capitalize() for language in languages])
   ax.grid(True, alpha=0.3)
 
-  for i, (lang, rate) in enumerate(zip(languages, token_rates)):
+  for i, (_lang, rate) in enumerate(zip(languages, token_rates, strict=True)):
     ax.text(i, rate + 0.01, f"{rate:.3f}", ha="center", fontsize=8)
 
 

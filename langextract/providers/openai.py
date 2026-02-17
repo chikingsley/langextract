@@ -17,12 +17,14 @@
 
 import concurrent.futures
 import dataclasses
-from collections.abc import Iterator, Sequence
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from langextract.core import base_model, data, exceptions, schema
 from langextract.core import types as core_types
 from langextract.providers import patterns, router
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator, Sequence
 
 
 @router.register(
@@ -84,7 +86,7 @@ class OpenAILanguageModel(base_model.BaseLanguageModel):
         except ImportError as e:
             raise exceptions.InferenceConfigError(
                 "OpenAI provider requires openai package. "
-                "Install with: pip install langextract[openai]"
+                "Install with: pip install openai"
             ) from e
 
         self.model_id = model_id

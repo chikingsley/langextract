@@ -82,8 +82,7 @@ Prerequisites:
 
 import dataclasses
 import warnings
-from collections.abc import Iterator, Mapping, Sequence
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urljoin, urlparse
 
 import httpx
@@ -93,6 +92,9 @@ from langextract.core import base_model, data, exceptions, schema
 from langextract.core import format_handler as fh
 from langextract.core import types as core_types
 from langextract.providers import patterns, router
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator, Mapping, Sequence
 
 # Ollama defaults
 _OLLAMA_DEFAULT_MODEL_URL = "http://localhost:11434"
@@ -430,6 +432,5 @@ class OllamaLanguageModel(base_model.BaseLanguageModel):
             raise exceptions.InferenceConfigError(
                 f"Can't find Ollama {model}. Try: ollama run {model}"
             )
-        else:
-            msg = f"Bad status code from Ollama: {response.status_code}"
-            raise exceptions.InferenceRuntimeError(msg, provider="Ollama")
+        msg = f"Bad status code from Ollama: {response.status_code}"
+        raise exceptions.InferenceRuntimeError(msg, provider="Ollama")

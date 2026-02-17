@@ -21,14 +21,17 @@ inference on.
 """
 
 import dataclasses
+import logging
 import re
-from collections.abc import Iterable, Iterator, Sequence
+from typing import TYPE_CHECKING
 
 import more_itertools
-import logging
 
 from langextract.core import data, exceptions
 from langextract.core import tokenizer as tokenizer_lib
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable, Iterator, Sequence
 
 
 class TokenUtilError(exceptions.LangExtractError):
@@ -268,21 +271,25 @@ class SentenceIterator:
         self,
         tokenized_text: tokenizer_lib.TokenizedText,
         curr_token_pos: int = 0,
+        known_abbreviations: set[str] | None = None,
     ):
         """Constructor.
 
         Args:
           tokenized_text: Document to iterate through.
           curr_token_pos: Iterate through sentences from this token position.
+          known_abbreviations: Optional set of abbreviations that should not
+            terminate a sentence (for example {"Dr.", "M."}).
 
         Raises:
           IndexError: if curr_token_pos is not within the document.
         """
         self.tokenized_text = tokenized_text
         self.token_len = len(tokenized_text.tokens)
+        self.known_abbreviations = known_abbreviations
         if curr_token_pos < 0:
             raise IndexError(f"Current token position {curr_token_pos} can not be negative.")
-        elif curr_token_pos > self.token_len:
+        if curr_token_pos > self.token_len:
             raise IndexError(
                 f"Current token position {curr_token_pos} is past the length of the "
                 f"document {self.token_len}."
@@ -305,11 +312,19 @@ class SentenceIterator:
         if self.curr_token_pos == self.token_len:
             raise StopIteration
         # This locates the sentence which contains the current token position.
-        sentence_range = tokenizer_lib.find_sentence_range(
-            self.tokenized_text.text,
-            self.tokenized_text.tokens,
-            self.curr_token_pos,
-        )
+        if self.known_abbreviations is None:
+            sentence_range = tokenizer_lib.find_sentence_range(
+                self.tokenized_text.text,
+                self.tokenized_text.tokens,
+                self.curr_token_pos,
+            )
+        else:
+            sentence_range = tokenizer_lib.find_sentence_range(
+                self.tokenized_text.text,
+                self.tokenized_text.tokens,
+                self.curr_token_pos,
+                known_abbreviations=self.known_abbreviations,
+            )
         assert sentence_range
         # Start the sentence from the current token position.
         # If we are in the middle of a sentence, we should start from there.
@@ -366,6 +381,7 @@ class ChunkIterator:
         max_char_buffer: int,
         tokenizer_impl: tokenizer_lib.Tokenizer,
         document: data.Document | None = None,
+        known_abbreviations: set[str] | None = None,
     ):
         """Constructor.
 
@@ -374,28 +390,53 @@ class ChunkIterator:
           max_char_buffer: Size of buffer that we can run inference on.
           tokenizer_impl: Tokenizer instance to use.
           document: Optional source document.
+          known_abbreviations: Optional abbreviation overrides for sentence
+            splitting.
         """
-        if text is None:
-            if document is None:
-                raise ValueError("Either text or document must be provided.")
-            text = document.text or ""
-
-        if isinstance(text, str):
-            text = tokenizer_impl.tokenize(text)
-        elif isinstance(text, tokenizer_lib.TokenizedText) and not text.tokens:
-            text_to_tokenize = text.text or (document.text if document else "")
-            text = tokenizer_impl.tokenize(text_to_tokenize)
-        self.tokenized_text = text
+        self.document, self.tokenized_text = self._normalize_inputs(
+            text=text,
+            document=document,
+            tokenizer_impl=tokenizer_impl,
+        )
         self.max_char_buffer = max_char_buffer
-        self.sentence_iter = SentenceIterator(self.tokenized_text)
+        self.known_abbreviations = known_abbreviations
+        self.sentence_iter = SentenceIterator(
+            self.tokenized_text,
+            known_abbreviations=self.known_abbreviations,
+        )
         self.broken_sentence = False
 
-        # TODO: Refactor redundancy between document and text.
-        if document is None:
-            self.document = data.Document(text=text.text)
+    @staticmethod
+    def _normalize_inputs(
+        text: str | tokenizer_lib.TokenizedText | None,
+        document: data.Document | None,
+        tokenizer_impl: tokenizer_lib.Tokenizer,
+    ) -> tuple[data.Document, tokenizer_lib.TokenizedText]:
+        """Normalize text/document inputs into a single consistent document state."""
+        if text is None and document is None:
+            raise ValueError("Either text or document must be provided.")
+
+        tokenized_text: tokenizer_lib.TokenizedText
+        if text is None:
+            assert document is not None
+            tokenized_text = tokenizer_impl.tokenize(document.text or "")
+        elif isinstance(text, str):
+            tokenized_text = tokenizer_impl.tokenize(text)
+        elif text.tokens:
+            tokenized_text = text
         else:
-            self.document = document
-        self.document.tokenized_text = self.tokenized_text
+            fallback_text = text.text or (document.text if document else "")
+            tokenized_text = tokenizer_impl.tokenize(fallback_text)
+
+        if document is None:
+            document = data.Document(text=tokenized_text.text)
+        elif document.text != tokenized_text.text:
+            raise ValueError(
+                "When both text and document are provided, document.text must match text."
+            )
+
+        document.tokenized_text = tokenized_text
+        return document, tokenized_text
 
     def __iter__(self) -> Iterator[TextChunk]:
         return self
@@ -421,7 +462,9 @@ class ChunkIterator:
         curr_chunk = create_token_interval(sentence.start_index, sentence.start_index + 1)
         if self._tokens_exceed_buffer(curr_chunk):
             self.sentence_iter = SentenceIterator(
-                self.tokenized_text, curr_token_pos=sentence.start_index + 1
+                self.tokenized_text,
+                curr_token_pos=sentence.start_index + 1,
+                known_abbreviations=self.known_abbreviations,
             )
             self.broken_sentence = curr_chunk.end_index < sentence.end_index
             return TextChunk(
@@ -442,15 +485,16 @@ class ChunkIterator:
                     # Terminate the curr_chunk at the start of the most recent newline.
                     curr_chunk = create_token_interval(curr_chunk.start_index, start_of_new_line)
                 self.sentence_iter = SentenceIterator(
-                    self.tokenized_text, curr_token_pos=curr_chunk.end_index
+                    self.tokenized_text,
+                    curr_token_pos=curr_chunk.end_index,
+                    known_abbreviations=self.known_abbreviations,
                 )
                 self.broken_sentence = True
                 return TextChunk(
                     token_interval=curr_chunk,
                     document=self.document,
                 )
-            else:
-                curr_chunk = test_chunk
+            curr_chunk = test_chunk
 
         if self.broken_sentence:
             self.broken_sentence = False
@@ -459,14 +503,15 @@ class ChunkIterator:
                 test_chunk = create_token_interval(curr_chunk.start_index, sentence.end_index)
                 if self._tokens_exceed_buffer(test_chunk):
                     self.sentence_iter = SentenceIterator(
-                        self.tokenized_text, curr_token_pos=curr_chunk.end_index
+                        self.tokenized_text,
+                        curr_token_pos=curr_chunk.end_index,
+                        known_abbreviations=self.known_abbreviations,
                     )
                     return TextChunk(
                         token_interval=curr_chunk,
                         document=self.document,
                     )
-                else:
-                    curr_chunk = test_chunk
+                curr_chunk = test_chunk
 
         return TextChunk(
             token_interval=curr_chunk,

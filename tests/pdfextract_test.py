@@ -4,11 +4,14 @@ import tempfile
 from pathlib import Path
 
 import pymupdf
-import pytest
-
 from pdfextract import extract_document
 from pdfextract.quality import check_page_quality
 from pdfextract.types import DocumentResult
+
+
+def _make_temp_pdf_path() -> Path:
+    with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp_file:
+        return Path(tmp_file.name)
 
 
 def _create_test_pdf(text_pages: list[str]) -> Path:
@@ -17,7 +20,7 @@ def _create_test_pdf(text_pages: list[str]) -> Path:
     for text in text_pages:
         page = doc.new_page()
         page.insert_text((72, 72), text, fontsize=12)
-    path = Path(tempfile.mktemp(suffix=".pdf"))
+    path = _make_temp_pdf_path()
     doc.save(str(path))
     doc.close()
     return path
@@ -96,13 +99,16 @@ class TestNativeExtraction:
                 # Each word's text should match the slice of full_text
                 assert result.full_text[word.char_start : word.char_end] == word.text, (
                     f"Word '{word.text}' at [{word.char_start}:{word.char_end}] "
-                    f"doesn't match full_text slice '{result.full_text[word.char_start:word.char_end]}'"
+                    "doesn't match full_text slice "
+                    f"'{result.full_text[word.char_start : word.char_end]}'"
                 )
         finally:
             path.unlink(missing_ok=True)
 
     def test_words_in_range(self):
-        path = _create_test_pdf(["The contract value is seven thousand nine hundred thirty dollars"])
+        path = _create_test_pdf(
+            ["The contract value is seven thousand nine hundred thirty dollars"]
+        )
         try:
             result = extract_document(str(path), skip_ocr=True)
             # Find "contract" in full text
@@ -132,7 +138,7 @@ class TestNativeExtraction:
         """A blank page should be flagged as needing OCR."""
         doc = pymupdf.open()
         doc.new_page()  # blank page, no text
-        path = Path(tempfile.mktemp(suffix=".pdf"))
+        path = _make_temp_pdf_path()
         doc.save(str(path))
         doc.close()
 

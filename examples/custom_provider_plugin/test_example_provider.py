@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --script
 # Copyright 2025 Google LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,13 +18,14 @@
 import os
 
 import dotenv
+import langextract as lx
 
-# Import the provider to trigger registration with LangExtract
+# Import the provider to trigger registration with LangExtract.
 # Note: This manual import is only needed when running without installation.
 # After `pip install -e .`, the entry point system handles this automatically.
-from langextract_provider_example import CustomGeminiProvider  # noqa: F401
+from langextract_provider_example import CustomGeminiProvider
 
-import langextract as lx
+_ = CustomGeminiProvider
 
 
 def main():

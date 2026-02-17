@@ -18,11 +18,13 @@
 import json
 import re
 import typing
-from collections.abc import Mapping, Sequence
 
 import yaml
 
 from langextract.core import data, exceptions
+
+if typing.TYPE_CHECKING:
+    from collections.abc import Mapping, Sequence
 
 ExtractionValueType = str | int | float | dict | list | None
 
@@ -169,10 +171,9 @@ class FormatHandler:
                 raise exceptions.FormatParseError(
                     f"Content must be a mapping with an '{self.wrapper_key}' key."
                 )
-            else:
-                raise exceptions.FormatParseError(
-                    "Content must be a list of extractions or a dict."
-                )
+            raise exceptions.FormatParseError(
+                "Content must be a list of extractions or a dict."
+            )
 
         require_wrapper = self.wrapper_key is not None and (self.use_wrapper or bool(strict))
 
@@ -284,15 +285,14 @@ class FormatHandler:
                     raise exceptions.FormatParseError(
                         "Input string does not contain valid fence markers."
                     )
-                else:
-                    raise exceptions.FormatParseError(
-                        "Multiple fenced blocks found. Expected exactly one."
-                    )
+                raise exceptions.FormatParseError(
+                    "Multiple fenced blocks found. Expected exactly one."
+                )
             return candidates[0].group("body").strip()
 
         if len(candidates) == 1:
             return candidates[0].group("body").strip()
-        elif len(candidates) > 1:
+        if len(candidates) > 1:
             raise exceptions.FormatParseError("Multiple fenced blocks found. Expected exactly one.")
 
         if matches:
@@ -331,7 +331,7 @@ class FormatHandler:
 
         if rp.get("format_handler") is not None:
             handler = rp.pop("format_handler")
-            return typing.cast(FormatHandler, handler), rp
+            return typing.cast("FormatHandler", handler), rp
 
         handler = cls(
             format_type=base_format_type,

@@ -26,19 +26,19 @@ class FormatHandlerTest(parameterized.TestCase):
     """Tests for FormatHandler."""
 
     @parameterized.named_parameters(
-        dict(
-            testcase_name="json_with_wrapper_and_fences",
-            format_type=data.FormatType.JSON,
-            use_wrapper=True,
-            wrapper_key="extractions",
-            use_fences=True,
-            extraction_class="person",
-            extraction_text="Alice",
-            attributes={"role": "engineer"},
-            expected_fence="```json",
-            expected_wrapper='"extractions":',
-            expected_extraction='"person": "Alice"',
-            model_output=textwrap.dedent("""
+        {
+            "testcase_name": "json_with_wrapper_and_fences",
+            "format_type": data.FormatType.JSON,
+            "use_wrapper": True,
+            "wrapper_key": "extractions",
+            "use_fences": True,
+            "extraction_class": "person",
+            "extraction_text": "Alice",
+            "attributes": {"role": "engineer"},
+            "expected_fence": "```json",
+            "expected_wrapper": '"extractions":',
+            "expected_extraction": '"person": "Alice"',
+            "model_output": textwrap.dedent("""
               Here is the result:
               ```json
               {
@@ -48,47 +48,47 @@ class FormatHandlerTest(parameterized.TestCase):
               }
               ```
           """).strip(),
-            parsed_class="person",
-            parsed_text="Bob",
-        ),
-        dict(
-            testcase_name="json_no_wrapper_no_fences",
-            format_type=data.FormatType.JSON,
-            use_wrapper=False,
-            wrapper_key=None,
-            use_fences=False,
-            extraction_class="item",
-            extraction_text="book",
-            attributes=None,
-            expected_fence=None,
-            expected_wrapper=None,
-            expected_extraction='"item": "book"',
-            model_output='[{"item": "pen", "item_attributes": {}}]',
-            parsed_class="item",
-            parsed_text="pen",
-        ),
-        dict(
-            testcase_name="yaml_with_wrapper_and_fences",
-            format_type=data.FormatType.YAML,
-            use_wrapper=True,
-            wrapper_key="extractions",
-            use_fences=True,
-            extraction_class="city",
-            extraction_text="Paris",
-            attributes=None,
-            expected_fence="```yaml",
-            expected_wrapper="extractions:",
-            expected_extraction="city: Paris",
-            model_output=textwrap.dedent("""
+            "parsed_class": "person",
+            "parsed_text": "Bob",
+        },
+        {
+            "testcase_name": "json_no_wrapper_no_fences",
+            "format_type": data.FormatType.JSON,
+            "use_wrapper": False,
+            "wrapper_key": None,
+            "use_fences": False,
+            "extraction_class": "item",
+            "extraction_text": "book",
+            "attributes": None,
+            "expected_fence": None,
+            "expected_wrapper": None,
+            "expected_extraction": '"item": "book"',
+            "model_output": '[{"item": "pen", "item_attributes": {}}]',
+            "parsed_class": "item",
+            "parsed_text": "pen",
+        },
+        {
+            "testcase_name": "yaml_with_wrapper_and_fences",
+            "format_type": data.FormatType.YAML,
+            "use_wrapper": True,
+            "wrapper_key": "extractions",
+            "use_fences": True,
+            "extraction_class": "city",
+            "extraction_text": "Paris",
+            "attributes": None,
+            "expected_fence": "```yaml",
+            "expected_wrapper": "extractions:",
+            "expected_extraction": "city: Paris",
+            "model_output": textwrap.dedent("""
               ```yaml
               extractions:
                 - city: London
                   city_attributes: {}
               ```
           """).strip(),
-            parsed_class="city",
-            parsed_text="London",
-        ),
+            "parsed_class": "city",
+            "parsed_text": "London",
+        },
     )
     def test_format_and_parse(
         self,
@@ -207,26 +207,26 @@ class FormatHandlerTest(parameterized.TestCase):
         )
 
     @parameterized.named_parameters(
-        dict(
-            testcase_name="yaml_no_wrapper_no_fences",
-            format_type=data.FormatType.YAML,
-            use_wrapper=False,
-            use_fences=False,
-        ),
-        dict(
-            testcase_name="json_with_wrapper_and_fences",
-            format_type=data.FormatType.JSON,
-            use_wrapper=True,
-            wrapper_key="extractions",
-            use_fences=True,
-        ),
-        dict(
-            testcase_name="yaml_with_wrapper_no_fences",
-            format_type=data.FormatType.YAML,
-            use_wrapper=True,
-            wrapper_key="extractions",
-            use_fences=False,
-        ),
+        {
+            "testcase_name": "yaml_no_wrapper_no_fences",
+            "format_type": data.FormatType.YAML,
+            "use_wrapper": False,
+            "use_fences": False,
+        },
+        {
+            "testcase_name": "json_with_wrapper_and_fences",
+            "format_type": data.FormatType.JSON,
+            "use_wrapper": True,
+            "wrapper_key": "extractions",
+            "use_fences": True,
+        },
+        {
+            "testcase_name": "yaml_with_wrapper_no_fences",
+            "format_type": data.FormatType.YAML,
+            "use_wrapper": True,
+            "wrapper_key": "extractions",
+            "use_fences": False,
+        },
     )
     def test_format_parse_roundtrip(self, format_type, use_wrapper, use_fences, wrapper_key=None):
         """Test that what we format can be parsed back identically."""
@@ -248,7 +248,7 @@ class FormatHandlerTest(parameterized.TestCase):
 
         parsed = handler.parse_output(formatted)
         self.assertEqual(parsed[0]["test"], "value")
-        attrs = cast(dict[str, object], parsed[0]["test_attributes"])
+        attrs = cast("dict[str, object]", parsed[0]["test_attributes"])
         self.assertEqual(attrs["key"], "data")
 
 

@@ -18,8 +18,8 @@ Centralized configuration for tokenization tests, model parameters,
 display formatting, and test text sources.
 """
 
-from dataclasses import dataclass
 import enum
+from dataclasses import dataclass
 from pathlib import Path
 
 # Result dictionary keys
@@ -49,7 +49,7 @@ class ModelConfig:
   gemini_rate_limit_delay: float = 8.0  # Seconds between batches
 
 
-class TextTypes(str, enum.Enum):
+class TextTypes(enum.StrEnum):
   """Supported languages for extraction testing."""
 
   ENGLISH = "english"

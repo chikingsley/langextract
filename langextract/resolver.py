@@ -24,11 +24,10 @@ import collections
 import difflib
 import functools
 import itertools
+import logging
 import operator
 from collections.abc import Iterator, Mapping, Sequence
 from typing import Final
-
-import logging
 
 from langextract.core import data, exceptions, schema
 from langextract.core import format_handler as fh
@@ -52,7 +51,6 @@ ALIGNMENT_PARAM_KEYS: Final[frozenset[str]] = frozenset(
 class AbstractResolver(abc.ABC):
     """Resolves LLM text outputs into structured data."""
 
-    # TODO: Review value and requirements for abstract class.
     def __init__(
         self,
         fence_output: bool = True,

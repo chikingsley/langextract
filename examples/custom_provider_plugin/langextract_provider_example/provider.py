@@ -17,11 +17,14 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Any, Iterator, Sequence
+from typing import TYPE_CHECKING, Any
+
+import langextract as lx
 
 from langextract_provider_example import schema as custom_schema
 
-import langextract as lx
+if TYPE_CHECKING:
+    from collections.abc import Iterator, Sequence
 
 
 @lx.providers.router.register(
@@ -70,7 +73,7 @@ class CustomGeminiProvider(lx.inference.BaseLanguageModel):
         """
         super().__init__()
 
-        # TODO: Replace with your own client initialization
+        # Placeholder: replace with your own client initialization.
         try:
             from google import genai
         except ImportError as e:
@@ -160,7 +163,7 @@ class CustomGeminiProvider(lx.inference.BaseLanguageModel):
 
         for prompt in batch_prompts:
             try:
-                # TODO: Replace this with your own API/model calls
+                # Placeholder: replace this with your own API/model calls.
                 response = self._client.models.generate_content(
                     model=self.model_id, contents=prompt, config=config
                 )
@@ -168,4 +171,4 @@ class CustomGeminiProvider(lx.inference.BaseLanguageModel):
                 yield [lx.inference.ScoredOutput(score=1.0, output=output)]
 
             except Exception as e:
-                raise lx.exceptions.InferenceRuntimeError(f"API error: {str(e)}", original=e) from e
+                raise lx.exceptions.InferenceRuntimeError(f"API error: {e!s}", original=e) from e

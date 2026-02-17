@@ -13,14 +13,17 @@ Usage:
 """
 
 from pdfextract.extract import extract_document
+from pdfextract.ocr_backends import available_ocr_backends, create_ocr_backend
 from pdfextract.quality import check_page_quality
 from pdfextract.types import DocumentResult, PageResult, QualityCheck, WordBbox
 
 __all__ = [
-    "extract_document",
-    "check_page_quality",
     "DocumentResult",
     "PageResult",
     "QualityCheck",
     "WordBbox",
+    "available_ocr_backends",
+    "check_page_quality",
+    "create_ocr_backend",
+    "extract_document",
 ]

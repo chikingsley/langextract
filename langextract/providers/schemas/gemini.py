@@ -14,14 +14,17 @@
 
 """Gemini provider schema implementation."""
 
+from __future__ import annotations
 
 import dataclasses
 import warnings
-from collections.abc import Sequence
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from langextract.core import data, schema
 from langextract.core import format_handler as fh
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 
 @dataclasses.dataclass

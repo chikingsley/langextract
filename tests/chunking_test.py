@@ -62,6 +62,27 @@ class SentenceIterTest(absltest.TestCase):
         with self.assertRaises(StopIteration):
             next(sentence_iter)
 
+    def test_custom_known_abbreviations(self):
+        text = "M. Smith est ici. Il parle."
+        tokenized_text = tokenizer.tokenize(text)
+
+        default_iter = chunking.SentenceIterator(tokenized_text)
+        default_first = next(default_iter)
+        self.assertEqual(
+            chunking.get_token_interval_text(tokenized_text, default_first),
+            "M.",
+        )
+
+        custom_iter = chunking.SentenceIterator(
+            tokenized_text,
+            known_abbreviations={"M."},
+        )
+        custom_first = next(custom_iter)
+        self.assertEqual(
+            chunking.get_token_interval_text(tokenized_text, custom_first),
+            "M. Smith est ici.",
+        )
+
 
 class ChunkIteratorTest(absltest.TestCase):
     def test_multi_sentence_chunk(self):
@@ -145,6 +166,27 @@ class ChunkIteratorTest(absltest.TestCase):
             next(chunk_iter)
         with self.assertRaises(StopIteration):
             next(chunk_iter)
+
+    def test_known_abbreviations_affect_chunk_boundaries(self):
+        text = "M. Smith est ici. Il parle."
+        tokenized_text = tokenizer.tokenize(text)
+
+        default_iter = chunking.ChunkIterator(
+            tokenized_text,
+            max_char_buffer=8,
+            tokenizer_impl=tokenizer.RegexTokenizer(),
+        )
+        default_first = next(default_iter)
+        self.assertEqual(default_first.chunk_text, "M.")
+
+        custom_iter = chunking.ChunkIterator(
+            tokenized_text,
+            max_char_buffer=8,
+            tokenizer_impl=tokenizer.RegexTokenizer(),
+            known_abbreviations={"M."},
+        )
+        custom_first = next(custom_iter)
+        self.assertEqual(custom_first.chunk_text, "M. Smith")
 
     def test_long_token_gets_own_chunk(self):
         text = "This is a sentence. This is a longer sentence. Mr. Bond\nasks\nwhy?"
@@ -311,6 +353,68 @@ class ChunkIteratorTest(absltest.TestCase):
         )
         text_chunk = next(chunk_iter)
 
+        self.assertEqual(text_chunk.document_text, mock_tokenized_text)
+        self.assertEqual(text_chunk.chunk_text, text)
+
+    def test_chunk_iterator_rejects_mismatched_string_text_and_document(self):
+        """Guard against conflicting sources when both text and document are provided."""
+        document = data.Document(text="Document text.")
+        with self.assertRaisesRegex(ValueError, "document.text must match"):
+            chunking.ChunkIterator(
+                text="Different text.",
+                max_char_buffer=100,
+                document=document,
+                tokenizer_impl=tokenizer.RegexTokenizer(),
+            )
+
+    def test_chunk_iterator_rejects_mismatched_tokenized_text_and_document(self):
+        """Guard against conflicting tokenized text and document payloads."""
+        document = data.Document(text="Document text.")
+        tokenized_text = tokenizer.tokenize("Different text.")
+
+        with self.assertRaisesRegex(ValueError, "document.text must match"):
+            chunking.ChunkIterator(
+                text=tokenized_text,
+                max_char_buffer=100,
+                document=document,
+                tokenizer_impl=tokenizer.RegexTokenizer(),
+            )
+
+    def test_chunk_iterator_document_only_uses_tokenizer_impl(self):
+        """Document-only path should tokenize from document text with provided tokenizer."""
+        text = "Some text."
+        document = data.Document(text=text)
+        mock_tokenizer = mock.Mock(spec=tokenizer.Tokenizer)
+        mock_tokens = [
+            tokenizer.Token(
+                index=0,
+                token_type=tokenizer.TokenType.WORD,
+                char_interval=tokenizer.CharInterval(start_pos=0, end_pos=4),
+            ),
+            tokenizer.Token(
+                index=1,
+                token_type=tokenizer.TokenType.WORD,
+                char_interval=tokenizer.CharInterval(start_pos=5, end_pos=9),
+            ),
+            tokenizer.Token(
+                index=2,
+                token_type=tokenizer.TokenType.PUNCTUATION,
+                char_interval=tokenizer.CharInterval(start_pos=9, end_pos=10),
+            ),
+        ]
+        mock_tokenized_text = tokenizer.TokenizedText(text=text, tokens=mock_tokens)
+        mock_tokenizer.tokenize.return_value = mock_tokenized_text
+
+        chunk_iter = chunking.ChunkIterator(
+            text=None,
+            max_char_buffer=100,
+            document=document,
+            tokenizer_impl=mock_tokenizer,
+        )
+        text_chunk = next(chunk_iter)
+
+        mock_tokenizer.tokenize.assert_called_once_with(text)
+        self.assertIs(text_chunk.document, document)
         self.assertEqual(text_chunk.document_text, mock_tokenized_text)
         self.assertEqual(text_chunk.chunk_text, text)
 

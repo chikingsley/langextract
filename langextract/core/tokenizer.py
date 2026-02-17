@@ -25,11 +25,14 @@ import dataclasses
 import enum
 import functools
 import unicodedata
-from collections.abc import Sequence, Set
+from typing import TYPE_CHECKING
 
 import regex
 
 from langextract.core import debug_utils, exceptions
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence, Set
 
 __all__ = [
     "BaseTokenizerError",
@@ -142,17 +145,26 @@ class TokenizedText:
     tokens: list[Token] = dataclasses.field(default_factory=list)
 
 
-_LETTERS_PATTERN = r"[^\W\d_]+"
+# Keep CJK scripts separate from other letter runs in RegexTokenizer so mixed
+# text like "Hello世界" does not merge into a single token.
+_CJK_SCRIPT_CLASS = r"\p{Han}\p{Hiragana}\p{Katakana}\p{Hangul}"
+_LETTERS_PATTERN = rf"[[^\W\d_]--[{_CJK_SCRIPT_CLASS}]]+"
 _DIGITS_PATTERN = r"\d+"
 # Group identical symbols (e.g. "!!") but split mixed ones.
 _SYMBOLS_PATTERN = r"([^\w\s]|_)\1*"
+_CJK_WORD_PATTERN = rf"[{_CJK_SCRIPT_CLASS}]+"
 _END_OF_SENTENCE_PATTERN = regex.compile(r"[.?!。\uFF01\uFF1F\u0964][\"'\u201D\u2019\u00BB)\]}]*$")
 
-_TOKEN_PATTERN = regex.compile(rf"{_LETTERS_PATTERN}|{_DIGITS_PATTERN}|{_SYMBOLS_PATTERN}")
-_WORD_PATTERN = regex.compile(rf"(?:{_LETTERS_PATTERN}|{_DIGITS_PATTERN})\Z")
+_TOKEN_PATTERN = regex.compile(
+    rf"{_LETTERS_PATTERN}|{_DIGITS_PATTERN}|{_CJK_WORD_PATTERN}|{_SYMBOLS_PATTERN}",
+    flags=regex.V1,
+)
+_WORD_PATTERN = regex.compile(
+    rf"(?:{_LETTERS_PATTERN}|{_DIGITS_PATTERN}|{_CJK_WORD_PATTERN})\Z",
+    flags=regex.V1,
+)
 
-# Abbreviations that do not end sentences.
-# TODO: Evaluate removal for large-context use cases.
+# Default abbreviations that do not end sentences.
 _KNOWN_ABBREVIATIONS = frozenset({"Mr.", "Mrs.", "Ms.", "Dr.", "Prof.", "St."})
 _CLOSING_PUNCTUATION = frozenset({'"', "'", "\u201d", "\u2019", "\u00bb", ")", "]", "}"})
 

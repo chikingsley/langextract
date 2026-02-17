@@ -4,11 +4,8 @@ This example demonstrates how to create a custom provider plugin that extends La
 
 **Note**: This is an example included in the LangExtract repository for reference. It is not part of the LangExtract package and won't be installed when you `pip install langextract`.
 
-**Automated Creation**: Instead of manually copying this example, use the [provider plugin generator script](../../scripts/create_provider_plugin.py):
-```bash
-python scripts/create_provider_plugin.py MyProvider --with-schema
-```
-This will create a complete plugin structure with all boilerplate code ready for customization.
+Use this directory as the starter template. Copy it and rename package/module
+names for your provider implementation.
 
 ## Structure
 
@@ -206,7 +203,6 @@ twine upload dist/*
 ```
 
 **Share with the community:**
-- Submit a PR to add your provider to the [Community Providers Registry](../../COMMUNITY_PROVIDERS.md)
 - Open an issue on [LangExtract GitHub](https://github.com/google/langextract/issues) to announce your provider and get feedback
 
 ## Common Pitfalls to Avoid

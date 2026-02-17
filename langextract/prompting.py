@@ -18,10 +18,10 @@
 import dataclasses
 import json
 import pathlib
+from typing import override
 
 import pydantic
 import yaml
-from typing import override
 
 from langextract.core import data, exceptions, format_handler
 

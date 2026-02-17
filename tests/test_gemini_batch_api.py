@@ -97,6 +97,60 @@ class TestGeminiBatchAPI(absltest.TestCase):
         mock_client.batches.create.assert_not_called()
 
     @mock.patch.object(genai, "Client", autospec=True)
+    def test_cached_content_passed_to_realtime_config(self, mock_client_cls):
+        """Test cached_content is forwarded for real-time generate_content calls."""
+        mock_client = mock_client_cls.return_value
+        mock_client.vertexai = True
+        mock_response = mock.create_autospec(genai.types.GenerateContentResponse, instance=True)
+        mock_response.text = '{"ok":1}'
+        mock_client.models.generate_content.return_value = mock_response
+
+        model = gemini.GeminiLanguageModel(
+            model_id="gemini-2.5-flash",
+            vertexai=True,
+            project="p",
+            location="l",
+            batch={"enabled": False},
+        )
+        outs = list(model.infer(["hello"], cached_content="cachedContents/abc"))
+
+        self.assertLen(outs, 1)
+        self.assertEqual(outs[0][0].output, '{"ok":1}')
+        call_kwargs = mock_client.models.generate_content.call_args.kwargs
+        config_arg = call_kwargs["config"]
+        self.assertEqual(config_arg.get("cached_content"), "cachedContents/abc")
+
+    @mock.patch.object(genai, "Client", autospec=True)
+    def test_cached_content_bypasses_batch(self, mock_client_cls):
+        """Test cached_content disables batch path and falls back to real-time."""
+        mock_client = mock_client_cls.return_value
+        mock_client.vertexai = True
+
+        mock_response_1 = mock.create_autospec(genai.types.GenerateContentResponse, instance=True)
+        mock_response_1.text = '{"ok":1}'
+        mock_response_2 = mock.create_autospec(genai.types.GenerateContentResponse, instance=True)
+        mock_response_2.text = '{"ok":2}'
+        mock_client.models.generate_content.side_effect = [mock_response_1, mock_response_2]
+
+        model = gemini.GeminiLanguageModel(
+            model_id="gemini-2.5-flash",
+            vertexai=True,
+            project="p",
+            location="l",
+            batch={
+                "enabled": True,
+                "threshold": 1,
+            },
+        )
+        outs = list(model.infer(["p1", "p2"], cached_content="cachedContents/abc"))
+
+        self.assertLen(outs, 2)
+        self.assertEqual(outs[0][0].output, '{"ok":1}')
+        self.assertEqual(outs[1][0].output, '{"ok":2}')
+        mock_client.batches.create.assert_not_called()
+        self.assertEqual(mock_client.models.generate_content.call_count, 2)
+
+    @mock.patch.object(genai, "Client", autospec=True)
     def test_realtime_when_below_threshold(self, mock_client_cls):
         """Test that real-time API is used when prompt count is below threshold."""
         mock_client = mock_client_cls.return_value
@@ -228,10 +282,10 @@ class BatchConfigValidationTest(parameterized.TestCase):
     """Test BatchConfig validation logic."""
 
     @parameterized.named_parameters(
-        dict(testcase_name="threshold_lt_1", threshold=0),
-        dict(testcase_name="poll_interval_le_0", poll_interval=0),
-        dict(testcase_name="timeout_le_0", timeout=0),
-        dict(testcase_name="max_prompts_per_job_le_0", max_prompts_per_job=0),
+        {"testcase_name": "threshold_lt_1", "threshold": 0},
+        {"testcase_name": "poll_interval_le_0", "poll_interval": 0},
+        {"testcase_name": "timeout_le_0", "timeout": 0},
+        {"testcase_name": "max_prompts_per_job_le_0", "max_prompts_per_job": 0},
     )
     def test_validation_errors(self, **overrides):
         """Verify validation errors for invalid config values."""
@@ -293,16 +347,20 @@ class BuildInlineRequestTest(absltest.TestCase):
         """Test request with JSON schema."""
         schema = {"type": "object", "properties": {"name": {"type": "string"}}}
         req = gb._build_inline_request("hello", schema, {"temperature": 0.5})
-        self.assertIsNotNone(req.config)
-        self.assertEqual(req.config.response_mime_type, "application/json")
-        self.assertEqual(req.config.response_schema, schema)
-        self.assertEqual(req.config.temperature, 0.5)
+        config_obj = req.config
+        self.assertIsNotNone(config_obj)
+        assert config_obj is not None
+        self.assertEqual(config_obj.response_mime_type, "application/json")
+        self.assertEqual(config_obj.response_schema, schema)
+        self.assertEqual(config_obj.temperature, 0.5)
 
     def test_request_with_system_instruction(self):
         """Test request with system instruction."""
         req = gb._build_inline_request("hello", None, {}, system_instruction="Be helpful")
-        self.assertIsNotNone(req.config)
-        self.assertEqual(req.config.system_instruction, "Be helpful")
+        config_obj = req.config
+        self.assertIsNotNone(config_obj)
+        assert config_obj is not None
+        self.assertEqual(config_obj.system_instruction, "Be helpful")
 
 
 if __name__ == "__main__":

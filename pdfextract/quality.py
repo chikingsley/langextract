@@ -49,9 +49,7 @@ def check_page_quality(text: str) -> QualityCheck:
         and meaningful_words >= MIN_MEANINGFUL_WORDS
     ):
         needs_ocr = False
-    elif alnum_ratio < MIN_ALNUM_RATIO:
-        needs_ocr = True
-    elif non_whitespace < MIN_NON_WHITESPACE_PER_PAGE:
+    elif alnum_ratio < MIN_ALNUM_RATIO or non_whitespace < MIN_NON_WHITESPACE_PER_PAGE:
         needs_ocr = True
     else:
         needs_ocr = meaningful_words == 0

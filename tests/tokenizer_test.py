@@ -39,20 +39,20 @@ class TokenizerTest(parameterized.TestCase):
             )
 
     @parameterized.named_parameters(
-        dict(
-            testcase_name="basic_text",
-            input_text="Hello, world!",
-            expected_tokens=[
+        {
+            "testcase_name": "basic_text",
+            "input_text": "Hello, world!",
+            "expected_tokens": [
                 tokenizer.Token(index=0, token_type=tokenizer.TokenType.WORD),
                 tokenizer.Token(index=1, token_type=tokenizer.TokenType.PUNCTUATION),
                 tokenizer.Token(index=2, token_type=tokenizer.TokenType.WORD),
                 tokenizer.Token(index=3, token_type=tokenizer.TokenType.PUNCTUATION),
             ],
-        ),
-        dict(
-            testcase_name="multiple_spaces_and_numbers",
-            input_text="Age:   25\nWeight=70kg.",
-            expected_tokens=[
+        },
+        {
+            "testcase_name": "multiple_spaces_and_numbers",
+            "input_text": "Age:   25\nWeight=70kg.",
+            "expected_tokens": [
                 tokenizer.Token(index=0, token_type=tokenizer.TokenType.WORD),
                 tokenizer.Token(index=1, token_type=tokenizer.TokenType.PUNCTUATION),
                 tokenizer.Token(index=2, token_type=tokenizer.TokenType.NUMBER),
@@ -66,11 +66,11 @@ class TokenizerTest(parameterized.TestCase):
                 tokenizer.Token(index=6, token_type=tokenizer.TokenType.WORD),
                 tokenizer.Token(index=7, token_type=tokenizer.TokenType.PUNCTUATION),
             ],
-        ),
-        dict(
-            testcase_name="multi_line_input",
-            input_text="Line1\nLine2\nLine3",
-            expected_tokens=[
+        },
+        {
+            "testcase_name": "multi_line_input",
+            "input_text": "Line1\nLine2\nLine3",
+            "expected_tokens": [
                 tokenizer.Token(index=0, token_type=tokenizer.TokenType.WORD),
                 tokenizer.Token(index=1, token_type=tokenizer.TokenType.NUMBER),
                 tokenizer.Token(
@@ -86,38 +86,38 @@ class TokenizerTest(parameterized.TestCase):
                 ),
                 tokenizer.Token(index=5, token_type=tokenizer.TokenType.NUMBER),
             ],
-        ),
-        dict(
-            testcase_name="only_symbols",
-            input_text="!!!@#   $$$%",
-            expected_tokens=[
+        },
+        {
+            "testcase_name": "only_symbols",
+            "input_text": "!!!@#   $$$%",
+            "expected_tokens": [
                 tokenizer.Token(index=0, token_type=tokenizer.TokenType.PUNCTUATION),
                 tokenizer.Token(index=1, token_type=tokenizer.TokenType.PUNCTUATION),
                 tokenizer.Token(index=2, token_type=tokenizer.TokenType.PUNCTUATION),
                 tokenizer.Token(index=3, token_type=tokenizer.TokenType.PUNCTUATION),
                 tokenizer.Token(index=4, token_type=tokenizer.TokenType.PUNCTUATION),
             ],
-        ),
-        dict(
-            testcase_name="empty_string",
-            input_text="",
-            expected_tokens=[],
-        ),
-        dict(
-            testcase_name="non_ascii_text",
-            input_text="café",
-            expected_tokens=[
+        },
+        {
+            "testcase_name": "empty_string",
+            "input_text": "",
+            "expected_tokens": [],
+        },
+        {
+            "testcase_name": "non_ascii_text",
+            "input_text": "café",
+            "expected_tokens": [
                 tokenizer.Token(index=0, token_type=tokenizer.TokenType.WORD),
             ],
-        ),
-        dict(
-            testcase_name="mixed_punctuation",
-            input_text="?!",
-            expected_tokens=[
+        },
+        {
+            "testcase_name": "mixed_punctuation",
+            "input_text": "?!",
+            "expected_tokens": [
                 tokenizer.Token(index=0, token_type=tokenizer.TokenType.PUNCTUATION),
                 tokenizer.Token(index=1, token_type=tokenizer.TokenType.PUNCTUATION),
             ],
-        ),
+        },
     )
     def test_tokenize_various_inputs(self, input_text, expected_tokens):
         tokenized = tokenizer.tokenize(input_text)
@@ -194,6 +194,27 @@ class TokenizerTest(parameterized.TestCase):
         self.assertEqual(tokenized.tokens[1].token_type, tokenizer.TokenType.PUNCTUATION)
         self.assertEqual(tokenized.tokens[2].token_type, tokenizer.TokenType.WORD)
 
+    def test_regex_tokenizer_splits_mixed_scripts(self):
+        """Verify Latin and CJK runs are not merged into one token."""
+        tok = tokenizer.RegexTokenizer()
+        text = "Hello世界"
+        tokenized = tok.tokenize(text)
+
+        self.assertLen(tokenized.tokens, 2)
+
+        token_texts = [
+            text[token.char_interval.start_pos : token.char_interval.end_pos]
+            for token in tokenized.tokens
+        ]
+        self.assertEqual(token_texts, ["Hello", "世界"])
+
+        self.assertEqual(tokenized.tokens[0].token_type, tokenizer.TokenType.WORD)
+        self.assertEqual(tokenized.tokens[1].token_type, tokenizer.TokenType.WORD)
+        self.assertEqual(tokenized.tokens[0].char_interval.start_pos, 0)
+        self.assertEqual(tokenized.tokens[0].char_interval.end_pos, 5)
+        self.assertEqual(tokenized.tokens[1].char_interval.start_pos, 5)
+        self.assertEqual(tokenized.tokens[1].char_interval.end_pos, 7)
+
 
 class UnicodeTokenizerTest(parameterized.TestCase):
     def assertTokenListEqual(self, actual_tokens, expected_tokens, msg=None):
@@ -216,10 +237,10 @@ class UnicodeTokenizerTest(parameterized.TestCase):
             )
 
     @parameterized.named_parameters(
-        dict(
-            testcase_name="japanese_text",
-            input_text="こんにちは、世界\uff01",
-            expected_tokens=[
+        {
+            "testcase_name": "japanese_text",
+            "input_text": "こんにちは、世界\uff01",
+            "expected_tokens": [
                 tokenizer.Token(index=0, token_type=tokenizer.TokenType.WORD),
                 tokenizer.Token(index=1, token_type=tokenizer.TokenType.WORD),
                 tokenizer.Token(index=2, token_type=tokenizer.TokenType.WORD),
@@ -230,27 +251,27 @@ class UnicodeTokenizerTest(parameterized.TestCase):
                 tokenizer.Token(index=7, token_type=tokenizer.TokenType.WORD),
                 tokenizer.Token(index=8, token_type=tokenizer.TokenType.PUNCTUATION),
             ],
-        ),
-        dict(
-            testcase_name="english_text",
-            input_text="Hello, world!",
-            expected_tokens=[
+        },
+        {
+            "testcase_name": "english_text",
+            "input_text": "Hello, world!",
+            "expected_tokens": [
                 tokenizer.Token(index=0, token_type=tokenizer.TokenType.WORD),
                 tokenizer.Token(index=1, token_type=tokenizer.TokenType.PUNCTUATION),
                 tokenizer.Token(index=2, token_type=tokenizer.TokenType.WORD),
                 tokenizer.Token(index=3, token_type=tokenizer.TokenType.PUNCTUATION),
             ],
-        ),
-        dict(
-            testcase_name="mixed_text",
-            input_text="Hello 世界 123",
-            expected_tokens=[
+        },
+        {
+            "testcase_name": "mixed_text",
+            "input_text": "Hello 世界 123",
+            "expected_tokens": [
                 tokenizer.Token(index=0, token_type=tokenizer.TokenType.WORD),
                 tokenizer.Token(index=1, token_type=tokenizer.TokenType.WORD),
                 tokenizer.Token(index=2, token_type=tokenizer.TokenType.WORD),
                 tokenizer.Token(index=3, token_type=tokenizer.TokenType.NUMBER),
             ],
-        ),
+        },
     )
     def test_tokenize_various_inputs(self, input_text, expected_tokens):
         tok = tokenizer.UnicodeTokenizer()
@@ -262,38 +283,38 @@ class UnicodeTokenizerTest(parameterized.TestCase):
         )
 
     @parameterized.named_parameters(
-        dict(
-            testcase_name="mixed_digit_han_same_type_grouping",
-            input_text="10毫克",  # "10 milligrams"
-            expected_tokens=[
+        {
+            "testcase_name": "mixed_digit_han_same_type_grouping",
+            "input_text": "10毫克",  # "10 milligrams"
+            "expected_tokens": [
                 ("10", tokenizer.TokenType.NUMBER),
                 ("毫", tokenizer.TokenType.WORD),
                 ("克", tokenizer.TokenType.WORD),
             ],
-            expected_first_after_newline=[False, False, False],
-        ),
-        dict(
-            testcase_name="underscore_word_separator",
-            input_text="hello_world",
-            expected_tokens=[
+            "expected_first_after_newline": [False, False, False],
+        },
+        {
+            "testcase_name": "underscore_word_separator",
+            "input_text": "hello_world",
+            "expected_tokens": [
                 ("hello", tokenizer.TokenType.WORD),
                 ("_", tokenizer.TokenType.PUNCTUATION),
                 ("world", tokenizer.TokenType.WORD),
             ],
-            expected_first_after_newline=[False, False, False],
-        ),
-        dict(
-            testcase_name="leading_trailing_underscores",
-            input_text="_test_case_",
-            expected_tokens=[
+            "expected_first_after_newline": [False, False, False],
+        },
+        {
+            "testcase_name": "leading_trailing_underscores",
+            "input_text": "_test_case_",
+            "expected_tokens": [
                 ("_", tokenizer.TokenType.PUNCTUATION),
                 ("test", tokenizer.TokenType.WORD),
                 ("_", tokenizer.TokenType.PUNCTUATION),
                 ("case", tokenizer.TokenType.WORD),
                 ("_", tokenizer.TokenType.PUNCTUATION),
             ],
-            expected_first_after_newline=[False, False, False, False, False],
-        ),
+            "expected_first_after_newline": [False, False, False, False, False],
+        },
     )
     def test_special_unicode_and_punctuation_handling(
         self, input_text, expected_tokens, expected_first_after_newline
@@ -628,10 +649,10 @@ class NegativeTestCases(parameterized.TestCase):
     """Test cases for invalid input and edge cases."""
 
     @parameterized.named_parameters(
-        dict(
-            testcase_name="invalid_utf8_sequence",
-            input_text="Invalid \ufffd sequence",
-            expected_tokens=[
+        {
+            "testcase_name": "invalid_utf8_sequence",
+            "input_text": "Invalid \ufffd sequence",
+            "expected_tokens": [
                 ("Invalid", tokenizer.TokenType.WORD),
                 (
                     "\ufffd",
@@ -639,32 +660,32 @@ class NegativeTestCases(parameterized.TestCase):
                 ),
                 ("sequence", tokenizer.TokenType.WORD),
             ],
-        ),
-        dict(
-            testcase_name="extremely_long_grapheme_cluster",
-            input_text="e" + "\u0301" * 10,
-            expected_tokens=[
+        },
+        {
+            "testcase_name": "extremely_long_grapheme_cluster",
+            "input_text": "e" + "\u0301" * 10,
+            "expected_tokens": [
                 (
                     "e" + "\u0301" * 10,
                     tokenizer.TokenType.WORD,
                 ),
             ],
-        ),
-        dict(
-            testcase_name="mixed_valid_invalid_unicode",
-            input_text="Valid текст \ufffd 中文",
-            expected_tokens=[
+        },
+        {
+            "testcase_name": "mixed_valid_invalid_unicode",
+            "input_text": "Valid текст \ufffd 中文",
+            "expected_tokens": [
                 ("Valid", tokenizer.TokenType.WORD),
                 ("текст", tokenizer.TokenType.WORD),
                 ("\ufffd", tokenizer.TokenType.PUNCTUATION),
                 ("中", tokenizer.TokenType.WORD),
                 ("文", tokenizer.TokenType.WORD),
             ],
-        ),
-        dict(
-            testcase_name="zero_width_joiners",
-            input_text="Family: 👨‍👩‍👧‍👦",
-            expected_tokens=[
+        },
+        {
+            "testcase_name": "zero_width_joiners",
+            "input_text": "Family: 👨‍👩‍👧‍👦",
+            "expected_tokens": [
                 ("Family", tokenizer.TokenType.WORD),
                 (":", tokenizer.TokenType.PUNCTUATION),
                 (
@@ -672,18 +693,18 @@ class NegativeTestCases(parameterized.TestCase):
                     tokenizer.TokenType.PUNCTUATION,
                 ),
             ],
-        ),
-        dict(
-            testcase_name="isolated_combining_marks",
-            input_text="\u0301\u0302\u0303 test",
-            expected_tokens=[
+        },
+        {
+            "testcase_name": "isolated_combining_marks",
+            "input_text": "\u0301\u0302\u0303 test",
+            "expected_tokens": [
                 (
                     "\u0301\u0302\u0303",
                     tokenizer.TokenType.PUNCTUATION,
                 ),
                 ("test", tokenizer.TokenType.WORD),
             ],
-        ),
+        },
     )
     def test_invalid_and_edge_case_unicode(self, input_text, expected_tokens):
         """Test handling of invalid Unicode sequences and edge cases."""
@@ -741,27 +762,27 @@ class TokensTextTest(parameterized.TestCase):
     _SENTENCE_WITH_ONE_LINE = "Patient Jane Doe, ID 67890, received 10mg daily."
 
     @parameterized.named_parameters(
-        dict(
-            testcase_name="substring_jane_doe",
-            input_text=_SENTENCE_WITH_ONE_LINE,
-            start_index=1,
-            end_index=3,
-            expected_substring="Jane Doe",
-        ),
-        dict(
-            testcase_name="substring_with_punctuation",
-            input_text=_SENTENCE_WITH_ONE_LINE,
-            start_index=0,
-            end_index=4,
-            expected_substring="Patient Jane Doe,",
-        ),
-        dict(
-            testcase_name="numeric_tokens",
-            input_text=_SENTENCE_WITH_ONE_LINE,
-            start_index=5,
-            end_index=6,
-            expected_substring="67890",
-        ),
+        {
+            "testcase_name": "substring_jane_doe",
+            "input_text": _SENTENCE_WITH_ONE_LINE,
+            "start_index": 1,
+            "end_index": 3,
+            "expected_substring": "Jane Doe",
+        },
+        {
+            "testcase_name": "substring_with_punctuation",
+            "input_text": _SENTENCE_WITH_ONE_LINE,
+            "start_index": 0,
+            "end_index": 4,
+            "expected_substring": "Patient Jane Doe,",
+        },
+        {
+            "testcase_name": "numeric_tokens",
+            "input_text": _SENTENCE_WITH_ONE_LINE,
+            "start_index": 5,
+            "end_index": 6,
+            "expected_substring": "67890",
+        },
     )
     def test_valid_intervals(self, input_text, start_index, end_index, expected_substring):
         input_tokenized = tokenizer.tokenize(input_text)
@@ -774,24 +795,24 @@ class TokensTextTest(parameterized.TestCase):
         )
 
     @parameterized.named_parameters(
-        dict(
-            testcase_name="start_index_negative",
-            input_text=_SENTENCE_WITH_ONE_LINE,
-            start_index=-1,
-            end_index=2,
-        ),
-        dict(
-            testcase_name="end_index_out_of_bounds",
-            input_text=_SENTENCE_WITH_ONE_LINE,
-            start_index=0,
-            end_index=999,
-        ),
-        dict(
-            testcase_name="start_index_gt_end_index",
-            input_text=_SENTENCE_WITH_ONE_LINE,
-            start_index=5,
-            end_index=4,
-        ),
+        {
+            "testcase_name": "start_index_negative",
+            "input_text": _SENTENCE_WITH_ONE_LINE,
+            "start_index": -1,
+            "end_index": 2,
+        },
+        {
+            "testcase_name": "end_index_out_of_bounds",
+            "input_text": _SENTENCE_WITH_ONE_LINE,
+            "start_index": 0,
+            "end_index": 999,
+        },
+        {
+            "testcase_name": "start_index_gt_end_index",
+            "input_text": _SENTENCE_WITH_ONE_LINE,
+            "start_index": 5,
+            "end_index": 4,
+        },
     )
     def test_invalid_intervals(self, input_text, start_index, end_index):
         input_tokenized = tokenizer.tokenize(input_text)
@@ -802,29 +823,29 @@ class TokensTextTest(parameterized.TestCase):
 
 class SentenceRangeTest(parameterized.TestCase):
     @parameterized.named_parameters(
-        dict(
-            testcase_name="simple_sentence",
-            input_text="This is one sentence. Then another?",
-            start_pos=0,
-            expected_interval=(0, 5),
-        ),
-        dict(
-            testcase_name="abbreviation_not_boundary",
-            input_text="Dr. John visited. Then left.",
-            start_pos=0,
-            expected_interval=(0, 5),
-        ),
-        dict(
-            testcase_name="second_line_capital_letter_terminates_sentence",
-            input_text=textwrap.dedent("""\
+        {
+            "testcase_name": "simple_sentence",
+            "input_text": "This is one sentence. Then another?",
+            "start_pos": 0,
+            "expected_interval": (0, 5),
+        },
+        {
+            "testcase_name": "abbreviation_not_boundary",
+            "input_text": "Dr. John visited. Then left.",
+            "start_pos": 0,
+            "expected_interval": (0, 5),
+        },
+        {
+            "testcase_name": "second_line_capital_letter_terminates_sentence",
+            "input_text": textwrap.dedent("""\
               Blood pressure was 160/90 and patient was recommended to
               Atenolol 50 mg daily."""),
-            start_pos=0,
+            "start_pos": 0,
             # "160/90" is now 3 tokens: "160", "/", "90".
             # Tokens: Blood, pressure, was, 160, /, 90, and, patient,
             # was, recommended, to (11 tokens)
-            expected_interval=(0, 11),
-        ),
+            "expected_interval": (0, 11),
+        },
     )
     def test_partial_sentence_range(self, input_text, start_pos, expected_interval):
         tokenized = tokenizer.tokenize(input_text)
@@ -836,11 +857,11 @@ class SentenceRangeTest(parameterized.TestCase):
         self.assertEqual(interval.end_index, expected_end)
 
     @parameterized.named_parameters(
-        dict(
-            testcase_name="end_of_text",
-            input_text="Only one sentence here",
-            start_pos=0,
-        ),
+        {
+            "testcase_name": "end_of_text",
+            "input_text": "Only one sentence here",
+            "start_pos": 0,
+        },
     )
     def test_full_sentence_range(self, input_text, start_pos):
         tokenized = tokenizer.tokenize(input_text)
@@ -851,16 +872,16 @@ class SentenceRangeTest(parameterized.TestCase):
         self.assertLen(tokens, interval.end_index)
 
     @parameterized.named_parameters(
-        dict(
-            testcase_name="out_of_range_negative_start",
-            input_text="Hello world.",
-            start_pos=-1,
-        ),
-        dict(
-            testcase_name="out_of_range_exceeding_length",
-            input_text="Hello world.",
-            start_pos=999,
-        ),
+        {
+            "testcase_name": "out_of_range_negative_start",
+            "input_text": "Hello world.",
+            "start_pos": -1,
+        },
+        {
+            "testcase_name": "out_of_range_exceeding_length",
+            "input_text": "Hello world.",
+            "start_pos": 999,
+        },
     )
     def test_invalid_start_pos(self, input_text, start_pos):
         tokenized = tokenizer.tokenize(input_text)

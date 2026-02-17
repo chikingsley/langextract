@@ -192,8 +192,7 @@ def create_model_from_id(
       An instantiated language model provider.
     """
     config = ModelConfig(model_id=model_id, provider=provider, provider_kwargs=provider_kwargs)
-    model = create_model(config, return_fence_output=False)
-    return model
+    return create_model(config, return_fence_output=False)
 
 
 def _create_model_with_schema(

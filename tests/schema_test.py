@@ -80,10 +80,10 @@ class BaseLanguageModelSchemaTest(absltest.TestCase):
 
 class GeminiSchemaTest(parameterized.TestCase):
     @parameterized.named_parameters(
-        dict(
-            testcase_name="empty_extractions",
-            examples_data=[],
-            expected_schema={
+        {
+            "testcase_name": "empty_extractions",
+            "examples_data": [],
+            "expected_schema": {
                 "type": "object",
                 "properties": {
                     data.EXTRACTIONS_KEY: {
@@ -96,10 +96,10 @@ class GeminiSchemaTest(parameterized.TestCase):
                 },
                 "required": [data.EXTRACTIONS_KEY],
             },
-        ),
-        dict(
-            testcase_name="single_extraction_no_attributes",
-            examples_data=[
+        },
+        {
+            "testcase_name": "single_extraction_no_attributes",
+            "examples_data": [
                 data.ExampleData(
                     text="Patient has diabetes.",
                     extractions=[
@@ -110,7 +110,7 @@ class GeminiSchemaTest(parameterized.TestCase):
                     ],
                 )
             ],
-            expected_schema={
+            "expected_schema": {
                 "type": "object",
                 "properties": {
                     data.EXTRACTIONS_KEY: {
@@ -132,10 +132,10 @@ class GeminiSchemaTest(parameterized.TestCase):
                 },
                 "required": [data.EXTRACTIONS_KEY],
             },
-        ),
-        dict(
-            testcase_name="single_extraction",
-            examples_data=[
+        },
+        {
+            "testcase_name": "single_extraction",
+            "examples_data": [
                 data.ExampleData(
                     text="Patient has diabetes.",
                     extractions=[
@@ -147,7 +147,7 @@ class GeminiSchemaTest(parameterized.TestCase):
                     ],
                 )
             ],
-            expected_schema={
+            "expected_schema": {
                 "type": "object",
                 "properties": {
                     data.EXTRACTIONS_KEY: {
@@ -169,10 +169,10 @@ class GeminiSchemaTest(parameterized.TestCase):
                 },
                 "required": [data.EXTRACTIONS_KEY],
             },
-        ),
-        dict(
-            testcase_name="multiple_extraction_classes",
-            examples_data=[
+        },
+        {
+            "testcase_name": "multiple_extraction_classes",
+            "examples_data": [
                 data.ExampleData(
                     text="Patient has diabetes.",
                     extractions=[
@@ -194,7 +194,7 @@ class GeminiSchemaTest(parameterized.TestCase):
                     ],
                 ),
             ],
-            expected_schema={
+            "expected_schema": {
                 "type": "object",
                 "properties": {
                     data.EXTRACTIONS_KEY: {
@@ -222,7 +222,7 @@ class GeminiSchemaTest(parameterized.TestCase):
                 },
                 "required": [data.EXTRACTIONS_KEY],
             },
-        ),
+        },
     )
     def test_from_examples_constructs_expected_schema(self, examples_data, expected_schema):
         gemini_schema = schemas.gemini.GeminiSchema.from_examples(examples_data)
@@ -286,27 +286,27 @@ class SchemaValidationTest(parameterized.TestCase):
         return schemas.gemini.GeminiSchema.from_examples(examples)
 
     @parameterized.named_parameters(
-        dict(
-            testcase_name="warns_about_fences",
-            use_fences=True,
-            use_wrapper=True,
-            wrapper_key=data.EXTRACTIONS_KEY,
-            expected_warning="fence_output=True may cause parsing issues",
-        ),
-        dict(
-            testcase_name="warns_about_wrong_wrapper_key",
-            use_fences=False,
-            use_wrapper=True,
-            wrapper_key="wrong_key",
-            expected_warning="response_schema expects wrapper_key='extractions'",
-        ),
-        dict(
-            testcase_name="no_warning_with_correct_settings",
-            use_fences=False,
-            use_wrapper=True,
-            wrapper_key=data.EXTRACTIONS_KEY,
-            expected_warning=None,
-        ),
+        {
+            "testcase_name": "warns_about_fences",
+            "use_fences": True,
+            "use_wrapper": True,
+            "wrapper_key": data.EXTRACTIONS_KEY,
+            "expected_warning": "fence_output=True may cause parsing issues",
+        },
+        {
+            "testcase_name": "warns_about_wrong_wrapper_key",
+            "use_fences": False,
+            "use_wrapper": True,
+            "wrapper_key": "wrong_key",
+            "expected_warning": "response_schema expects wrapper_key='extractions'",
+        },
+        {
+            "testcase_name": "no_warning_with_correct_settings",
+            "use_fences": False,
+            "use_wrapper": True,
+            "wrapper_key": data.EXTRACTIONS_KEY,
+            "expected_warning": None,
+        },
     )
     def test_gemini_validation(self, use_fences, use_wrapper, wrapper_key, expected_warning):
         """Test GeminiSchema validation with various settings."""

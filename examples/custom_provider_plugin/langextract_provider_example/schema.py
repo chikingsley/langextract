@@ -16,9 +16,12 @@
 
 from __future__ import annotations
 
-from typing import Any, Sequence
+from typing import TYPE_CHECKING, Any
 
 import langextract as lx
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 
 class CustomProviderSchema(lx.schema.BaseSchema):

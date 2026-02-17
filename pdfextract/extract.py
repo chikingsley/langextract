@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import logging
-from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 from pdfextract.native import extract_native
 from pdfextract.quality import check_page_quality
 from pdfextract.types import DocumentResult, PageResult, WordBbox
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +21,8 @@ def extract_document(
     ocr_dpi: int = 300,
     force_ocr: bool = False,
     skip_ocr: bool = False,
+    ocr_backend: str = "rapidocr",
+    ocr_backend_options: dict[str, Any] | None = None,
 ) -> DocumentResult:
     """Extract text and word bounding boxes from a PDF.
 
@@ -31,6 +36,8 @@ def extract_document(
         ocr_dpi: Resolution for OCR page rendering. Higher = better accuracy, slower.
         force_ocr: OCR every page regardless of native text quality.
         skip_ocr: Never run OCR (useful when PaddleOCR is not installed).
+        ocr_backend: OCR backend name (`rapidocr`, `ollama`, or `vllm`).
+        ocr_backend_options: Provider-specific options passed to OCR backend init.
 
     Returns:
         DocumentResult with full_text, word_map, and per-page results.
@@ -76,7 +83,14 @@ def extract_document(
         for page_num in ocr_needed:
             # Recalculate char_offset based on pages processed so far
             char_offset = _calculate_offset(final_pages, native_pages, page_num)
-            ocr_result = extract_page_ocr(doc, page_num, char_offset, dpi=ocr_dpi)
+            ocr_result = extract_page_ocr(
+                doc,
+                page_num,
+                char_offset,
+                dpi=ocr_dpi,
+                backend=ocr_backend,
+                backend_options=ocr_backend_options,
+            )
             final_pages.append(ocr_result)
 
     doc.close()

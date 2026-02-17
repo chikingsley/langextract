@@ -17,7 +17,6 @@
 
 import typing
 import warnings
-from collections.abc import Iterable
 from typing import cast
 
 from langextract import annotation, factory, io, prompting, resolver
@@ -25,6 +24,9 @@ from langextract import prompt_validation as pv
 from langextract.core import base_model, data
 from langextract.core import format_handler as fh
 from langextract.core import tokenizer as tokenizer_lib
+
+if typing.TYPE_CHECKING:
+    from collections.abc import Iterable
 
 
 def extract(
@@ -55,6 +57,7 @@ def extract(
     prompt_validation_strict: bool = False,
     show_progress: bool = True,
     tokenizer: tokenizer_lib.Tokenizer | None = None,
+    known_abbreviations: set[str] | None = None,
 ) -> list[data.AnnotatedDocument] | data.AnnotatedDocument:
     """Extracts structured information from text.
 
@@ -71,6 +74,8 @@ def extract(
         examples: List of ExampleData objects to guide the extraction.
         tokenizer: Optional Tokenizer instance to use for chunking and alignment.
           If None, defaults to RegexTokenizer.
+        known_abbreviations: Optional abbreviations that should not terminate
+          sentences during chunking (for example {"Dr.", "M."}).
         api_key: API key for LLM services. Usually not needed — set the
           provider-specific env var instead (e.g. GEMINI_API_KEY for Gemini,
           OPENAI_API_KEY for OpenAI). Cost considerations: Most
@@ -289,7 +294,7 @@ def extract(
     )
 
     if isinstance(text_or_documents, str):
-        result = annotator.annotate_text(
+        return annotator.annotate_text(
             text=text_or_documents,
             resolver=res,
             max_char_buffer=max_char_buffer,
@@ -301,22 +306,22 @@ def extract(
             show_progress=show_progress,
             max_workers=max_workers,
             tokenizer=tokenizer,
+            known_abbreviations=known_abbreviations,
             **alignment_kwargs,
         )
-        return result
-    else:
-        documents = cast(Iterable[data.Document], text_or_documents)
-        result = annotator.annotate_documents(
-            documents=documents,
-            resolver=res,
-            max_char_buffer=max_char_buffer,
-            batch_length=batch_length,
-            debug=debug,
-            extraction_passes=extraction_passes,
-            context_window_chars=context_window_chars,
-            show_progress=show_progress,
-            max_workers=max_workers,
-            tokenizer=tokenizer,
-            **alignment_kwargs,
-        )
-        return list(result)
+    documents = cast("Iterable[data.Document]", text_or_documents)
+    result = annotator.annotate_documents(
+        documents=documents,
+        resolver=res,
+        max_char_buffer=max_char_buffer,
+        batch_length=batch_length,
+        debug=debug,
+        extraction_passes=extraction_passes,
+        context_window_chars=context_window_chars,
+        show_progress=show_progress,
+        max_workers=max_workers,
+        tokenizer=tokenizer,
+        known_abbreviations=known_abbreviations,
+        **alignment_kwargs,
+    )
+    return list(result)

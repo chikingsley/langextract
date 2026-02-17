@@ -15,4 +15,26 @@
 """Public data model API."""
 
 
-from langextract.core.data import *  # noqa: F403
+from langextract.core.data import (
+    ATTRIBUTE_SUFFIX,
+    EXTRACTIONS_KEY,
+    AlignmentStatus,
+    AnnotatedDocument,
+    CharInterval,
+    Document,
+    ExampleData,
+    Extraction,
+    FormatType,
+)
+
+__all__ = [
+    "ATTRIBUTE_SUFFIX",
+    "EXTRACTIONS_KEY",
+    "AlignmentStatus",
+    "AnnotatedDocument",
+    "CharInterval",
+    "Document",
+    "ExampleData",
+    "Extraction",
+    "FormatType",
+]

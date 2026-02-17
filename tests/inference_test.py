@@ -296,7 +296,10 @@ class TestOllamaLanguageModel(absltest.TestCase):
         mock_response.status_code = 200
         mock_response.json.return_value = {"response": "test output"}
 
-        with mock.patch("langextract.providers.ollama.httpx.post", return_value=mock_response) as mock_post:
+        with mock.patch(
+            "langextract.providers.ollama.httpx.post",
+            return_value=mock_response,
+        ) as mock_post:
             model._ollama_query(prompt="test prompt")
 
             mock_post.assert_called_once()
@@ -319,7 +322,10 @@ class TestOllamaLanguageModel(absltest.TestCase):
         mock_response.status_code = 200
         mock_response.json.return_value = {"response": "test output"}
 
-        with mock.patch("langextract.providers.ollama.httpx.post", return_value=mock_response) as mock_post:
+        with mock.patch(
+            "langextract.providers.ollama.httpx.post",
+            return_value=mock_response,
+        ) as mock_post:
             list(model.infer(["test prompt"]))
 
             mock_post.assert_called_once()

@@ -72,7 +72,7 @@ results = lx.extract(
     batch_length=1000,
     language_model_params={
         "vertexai": True,
-        "project": "your-gcp-project", # TODO: Replace with your Project ID.
+        "project": "your-gcp-project", # Replace with your Project ID.
         "location": "us-central1",
         "batch": batch_config
     }

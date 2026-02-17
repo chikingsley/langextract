@@ -21,10 +21,9 @@ It supports both built-in providers and third-party providers via entry points.
 
 import functools
 import importlib
+import logging
 from importlib import metadata
 from typing import cast
-
-import logging
 
 from langextract.core import base_model
 
@@ -58,7 +57,7 @@ def _safe_entry_points(group: str) -> list:
     except AttributeError:
         # Python 3.8-3.9
         eps_by_group = cast(
-            dict[str, list[metadata.EntryPoint]],
+            "dict[str, list[metadata.EntryPoint]]",
             eps,
         )
         return list(eps_by_group.get(group, []))
@@ -191,7 +190,7 @@ def get_provider_class(
     Raises:
       KeyError: If the provider name is not found.
       ImportError: If the provider module cannot be imported (including
-                  missing optional dependencies).
+                  missing provider dependencies).
       TypeError: If the provider class is not compatible.
     """
     providers = available_providers(allow_override, include_optional)
@@ -201,8 +200,7 @@ def get_provider_class(
         raise KeyError(
             f"Unknown provider '{name}'. Available providers:"
             f" {', '.join(available) if available else 'none'}.\nHint: Did you"
-            " install the necessary extras (e.g., pip install"
-            f" langextract[{name}])?"
+            " install the provider dependencies (for example: pip install openai)?"
         )
 
     return _load_class(providers[name])

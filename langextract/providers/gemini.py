@@ -17,10 +17,9 @@
 
 import concurrent.futures
 import dataclasses
+import logging
 from collections.abc import Iterator, Sequence
 from typing import TYPE_CHECKING, Any, Final, cast
-
-import logging
 
 from langextract.core import base_model, data, exceptions, schema
 from langextract.core import types as core_types
@@ -210,7 +209,8 @@ class GeminiLanguageModel(base_model.BaseLanguageModel):
                 config.setdefault("response_mime_type", "application/json")
                 config.setdefault("response_schema", self.gemini_schema.schema_dict)
 
-            _ = cached_content
+            if cached_content:
+                config.setdefault("cached_content", cached_content)
             response = self._client.models.generate_content(
                 model=self.model_id,
                 contents=prompt,
@@ -222,7 +222,11 @@ class GeminiLanguageModel(base_model.BaseLanguageModel):
             prompt_tokens = getattr(usage_metadata, "prompt_token_count", None)
             completion_tokens = getattr(usage_metadata, "candidates_token_count", None)
             total_tokens = getattr(usage_metadata, "total_token_count", None)
-            if all(isinstance(v, int) for v in (prompt_tokens, completion_tokens, total_tokens)):
+            if (
+                isinstance(prompt_tokens, int)
+                and isinstance(completion_tokens, int)
+                and isinstance(total_tokens, int)
+            ):
                 usage = {
                     "prompt_tokens": prompt_tokens,
                     "completion_tokens": completion_tokens,
@@ -258,6 +262,8 @@ class GeminiLanguageModel(base_model.BaseLanguageModel):
         for key in ("max_output_tokens", "top_p", "top_k"):
             if key in merged_kwargs:
                 config[key] = merged_kwargs[key]
+        if cached_content:
+            config["cached_content"] = cached_content
 
         handled_keys = {"temperature", "max_output_tokens", "top_p", "top_k", "cached_content"}
         for key, value in merged_kwargs.items():
@@ -266,57 +272,63 @@ class GeminiLanguageModel(base_model.BaseLanguageModel):
 
         # Use batch API if threshold met
         if self._batch_cfg and self._batch_cfg.enabled:
+            if cached_content:
+                logging.info(
+                    "cached_content provided; skipping Gemini batch mode and using real-time API."
+                )
             if len(batch_prompts) >= self._batch_cfg.threshold:
-                try:
-                    if self.gemini_schema:
-                        self._validate_schema_config()
-                    schema_dict = self.gemini_schema.schema_dict if self.gemini_schema else None
-                    # Remove schema fields from config for batch API.
-                    # They are handled via schema_dict.
-                    batch_config = dict(config)
-                    batch_config.pop("response_mime_type", None)
-                    batch_config.pop("response_schema", None)
-                    # Extract top-level fields that don't belong in generationConfig
-                    raw_system_instruction = batch_config.pop("system_instruction", None)
-                    system_instruction = (
-                        raw_system_instruction if isinstance(raw_system_instruction, str) else None
-                    )
-                    raw_safety_settings = batch_config.pop("safety_settings", None)
-                    safety_settings = (
-                        raw_safety_settings
-                        if isinstance(raw_safety_settings, Sequence)
-                        and not isinstance(raw_safety_settings, (str, bytes, bytearray))
-                        else None
-                    )
-                    # TODO: Pass cached_content to batch API if supported in future
-                    outputs = gemini_batch.infer_batch(
-                        client=self._client,
-                        model_id=self.model_id,
-                        prompts=batch_prompts,
-                        schema_dict=schema_dict,
-                        gen_config=batch_config,
-                        cfg=self._batch_cfg,
-                        system_instruction=system_instruction,
-                        safety_settings=safety_settings,
-                        project=self.project,
-                        location=self.location,
-                    )
-                except exceptions.InferenceRuntimeError:
-                    raise
-                except Exception as e:
-                    raise exceptions.InferenceRuntimeError(
-                        f"Gemini Batch API error: {e}", original=e
-                    ) from e
+                if not cached_content:
+                    try:
+                        if self.gemini_schema:
+                            self._validate_schema_config()
+                        schema_dict = self.gemini_schema.schema_dict if self.gemini_schema else None
+                        # Remove schema fields from config for batch API.
+                        # They are handled via schema_dict.
+                        batch_config = dict(config)
+                        batch_config.pop("response_mime_type", None)
+                        batch_config.pop("response_schema", None)
+                        # Extract top-level fields that don't belong in generationConfig
+                        raw_system_instruction = batch_config.pop("system_instruction", None)
+                        system_instruction = (
+                            raw_system_instruction
+                            if isinstance(raw_system_instruction, str)
+                            else None
+                        )
+                        raw_safety_settings = batch_config.pop("safety_settings", None)
+                        safety_settings = (
+                            raw_safety_settings
+                            if isinstance(raw_safety_settings, Sequence)
+                            and not isinstance(raw_safety_settings, (str, bytes, bytearray))
+                            else None
+                        )
+                        outputs = gemini_batch.infer_batch(
+                            client=self._client,
+                            model_id=self.model_id,
+                            prompts=batch_prompts,
+                            schema_dict=schema_dict,
+                            gen_config=batch_config,
+                            cfg=self._batch_cfg,
+                            system_instruction=system_instruction,
+                            safety_settings=safety_settings,
+                            project=self.project,
+                            location=self.location,
+                        )
+                    except exceptions.InferenceRuntimeError:
+                        raise
+                    except Exception as e:
+                        raise exceptions.InferenceRuntimeError(
+                            f"Gemini Batch API error: {e}", original=e
+                        ) from e
 
-                for item in outputs:
-                    # Check if item has usage info (tuple of text, usage)
-                    if isinstance(item, tuple) and len(item) == 2:
-                        text, usage = item
-                        yield [core_types.ScoredOutput(score=1.0, output=text, usage=usage)]
-                    else:
-                        # Fallback for string-only returns
-                        yield [core_types.ScoredOutput(score=1.0, output=item)]
-                return
+                    for item in outputs:
+                        # Check if item has usage info (tuple of text, usage)
+                        if isinstance(item, tuple) and len(item) == 2:
+                            text, usage = item
+                            yield [core_types.ScoredOutput(score=1.0, output=text, usage=usage)]
+                        else:
+                            # Fallback for string-only returns
+                            yield [core_types.ScoredOutput(score=1.0, output=item)]
+                    return
             else:
                 logging.info(
                     "Gemini batch mode enabled but prompt count (%d) is below the"

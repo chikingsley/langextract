@@ -543,30 +543,30 @@ class InitTest(parameterized.TestCase):
                 )
 
     @parameterized.named_parameters(
-        dict(
-            testcase_name="show_progress_true_debug_false",
-            show_progress=True,
-            debug=False,
-            expected_progress_disabled=False,
-        ),
-        dict(
-            testcase_name="show_progress_false_debug_false",
-            show_progress=False,
-            debug=False,
-            expected_progress_disabled=True,
-        ),
-        dict(
-            testcase_name="show_progress_true_debug_true",
-            show_progress=True,
-            debug=True,
-            expected_progress_disabled=False,
-        ),
-        dict(
-            testcase_name="show_progress_false_debug_true",
-            show_progress=False,
-            debug=True,
-            expected_progress_disabled=True,
-        ),
+        {
+            "testcase_name": "show_progress_true_debug_false",
+            "show_progress": True,
+            "debug": False,
+            "expected_progress_disabled": False,
+        },
+        {
+            "testcase_name": "show_progress_false_debug_false",
+            "show_progress": False,
+            "debug": False,
+            "expected_progress_disabled": True,
+        },
+        {
+            "testcase_name": "show_progress_true_debug_true",
+            "show_progress": True,
+            "debug": True,
+            "expected_progress_disabled": False,
+        },
+        {
+            "testcase_name": "show_progress_false_debug_true",
+            "show_progress": False,
+            "debug": True,
+            "expected_progress_disabled": True,
+        },
     )
     @mock.patch("langextract.progress.create_extraction_progress_bar")
     @mock.patch("langextract.extraction.factory.create_model")

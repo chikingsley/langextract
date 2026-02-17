@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --script
 # Copyright 2025 Google LLC.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -44,16 +44,15 @@ Output:
 
 import argparse
 import os
-from pathlib import Path
 import sys
 import textwrap
 import time
 import traceback
 import urllib.error
 import urllib.request
+from pathlib import Path
 
 import dotenv
-
 import langextract as lx
 from langextract.providers import ollama
 
@@ -380,9 +379,11 @@ def example_shakespeare_dialogue(model_id: str, base_url: str) -> lx.data.Annota
     print("\n  Results:")
     print_results_summary(result.extractions)
 
-    characters = set(
-        ext.extraction_text for ext in result.extractions if ext.extraction_class == "character"
-    )
+    characters = {
+        ext.extraction_text
+        for ext in result.extractions
+        if ext.extraction_class == "character"
+    }
     if characters:
         print("\n  Characters found: " + ", ".join(sorted(characters)))
 
@@ -414,7 +415,7 @@ def save_results(
 
         try:
             html_content = lx.visualize(str(jsonl_path))
-            with open(html_path, "w") as f:
+            with html_path.open("w", encoding="utf-8") as f:
                 if hasattr(html_content, "data"):
                     f.write(html_content.data)
                 else:

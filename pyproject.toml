@@ -28,10 +28,13 @@ authors = [
     {name = "Chi Ejimofor", email = "chi@peacockery.studio"}
 ]
 dependencies = [
+    "google-cloud-storage>=2.14.0",
     "google-genai>=1.63.0",
     "httpx>=0.28.0",
     "more-itertools>=8.0.0",
+    "numpy>=1.26.0",
     "onnxruntime>=1.24.1",
+    "openai>=1.50.0",
     "pydantic>=2.7.0",
     "pydantic-settings>=2.2.0",
     "pymupdf>=1.27.1",
@@ -53,7 +56,6 @@ dependencies = [
 [project.scripts]
 langextract-cli = "langextract.cli:main"
 
-# Provider discovery mechanism for built-in and third-party providers
 [project.entry-points."langextract.providers"]
 gemini = "langextract.providers.gemini:GeminiLanguageModel"
 ollama = "langextract.providers.ollama:OllamaLanguageModel"
@@ -80,7 +82,6 @@ testpaths = ["tests"]
 python_files = "*_test.py"
 python_classes = "Test*"
 python_functions = "test_*"
-# Show extra test summary info
 addopts = "-ra"
 markers = [
     "live_api: marks tests as requiring live API access",
@@ -88,7 +89,6 @@ markers = [
     "integration: marks integration tests that test multiple components together",
 ]
 filterwarnings = [
-    # Upstream google-genai uses typing._UnionGenericAlias (deprecated in 3.14, removal in 3.17)
     "ignore:'_UnionGenericAlias' is deprecated:DeprecationWarning",
 ]
 
@@ -104,8 +104,25 @@ exclude = [
 ]
 
 [tool.ruff.lint]
-# Explicit strict set, based on Ruff's recommended incremental categories.
 select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+extend-select = [
+    "F",        # Pyflakes rules
+    "W",        # PyCodeStyle warnings
+    "E",        # PyCodeStyle errors
+    "I",        # Sort imports properly
+    "UP",       # Warn if certain things can changed due to newer Python versions
+    "C4",       # Catch incorrect use of comprehensions, dict, list, etc
+    "FA",       # Enforce from __future__ import annotations
+    "ISC",      # Good use of string concatenation
+    "ICN",      # Use common import conventions
+    "RET",      # Good return practices
+    "SIM",      # Common simplification rules
+    "TID",      # Some good import practices
+    "TC",       # Enforce importing certain types in a TYPE_CHECKING block
+    "PTH",      # Use pathlib instead of os.path
+    "TD",       # Be diligent with task-tracking comments
+    "NPY",      # Some numpy-specific things
+]
 
 [tool.importlinter]
 root_package = "langextract"

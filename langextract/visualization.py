@@ -25,24 +25,36 @@ Example
 import dataclasses
 import enum
 import html
+import importlib
 import itertools
 import json
 import pathlib
 import textwrap
+from typing import TYPE_CHECKING, Any
 
 from langextract import io
-from langextract.core import data
+
+if TYPE_CHECKING:
+    from langextract.core import data
 
 # Fallback if IPython is not present
 try:
-    from IPython import get_ipython  # type: ignore[import-not-found]
-    from IPython.display import HTML  # type: ignore[import-not-found]
+    ipython_module = importlib.import_module("IPython")
+    ipython_display_module = importlib.import_module("IPython.display")
 except ImportError:
 
-    def get_ipython():
+    def get_ipython() -> None:
         return None
 
-    HTML = None  # pytype: disable=annotation-type-mismatch
+    HTML: Any | None = None
+else:
+    get_ipython = getattr(ipython_module, "get_ipython", None)
+    if not callable(get_ipython):
+
+        def get_ipython() -> None:
+            return None
+
+    HTML = getattr(ipython_display_module, "HTML", None)
 
 
 def _is_jupyter() -> bool:
@@ -279,8 +291,8 @@ def _build_highlighted_text(
 
         if point.tag_type == TagType.END:
             return (point.position, 0, span_length)
-        else:  # point.tag_type == TagType.START
-            return (point.position, 1, -span_length)
+        # point.tag_type == TagType.START
+        return (point.position, 1, -span_length)
 
     points.sort(key=sort_key)
 
@@ -442,7 +454,7 @@ def _build_visualization_html(
     end_pos = first_extraction.char_interval.end_pos
     pos_info_str = f"[{start_pos}-{end_pos}]"
 
-    html_content = textwrap.dedent(f"""
+    return textwrap.dedent(f"""
     <div class="lx-animated-wrapper">
       <div class="lx-attributes-panel">
         {legend_html}
@@ -537,7 +549,6 @@ def _build_visualization_html(
       }})();
     </script>""")
 
-    return html_content
 
 
 def visualize(
@@ -546,7 +557,7 @@ def visualize(
     animation_speed: float = 1.0,
     show_legend: bool = True,
     gif_optimized: bool = True,
-) -> HTML | str:
+) -> object | str:
     """Visualises extraction data as animated highlighted HTML.
 
     Args:

@@ -18,13 +18,15 @@
 import copy
 import dataclasses
 import enum
-from collections.abc import Sequence
-
 import logging
+from typing import TYPE_CHECKING
 
 from langextract import resolver
 from langextract.core import data
 from langextract.core import tokenizer as tokenizer_lib
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 __all__ = [
     "AlignmentPolicy",

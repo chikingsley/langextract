@@ -28,6 +28,7 @@ from langextract.extraction import extract as extract_func
 
 __all__ = [
     "annotation",
+    "cli",
     "core",
     "data",
     "exceptions",
@@ -60,6 +61,7 @@ def visualize(*args: Any, **kwargs: Any):
 # PEP 562 lazy loading
 _LAZY_MODULES = {
     "annotation": "langextract.annotation",
+    "cli": "langextract.cli",
     "chunking": "langextract.chunking",
     "data": "langextract.data",
     "data_lib": "langextract.data_lib",

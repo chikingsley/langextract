@@ -2,11 +2,8 @@
 
 This directory contains the provider system for LangExtract, which enables support for different Large Language Model (LLM) backends.
 
-**Quick Start**: Use the [provider plugin generator script](../../scripts/create_provider_plugin.py) to create a new provider in minutes:
-
-```bash
-python scripts/create_provider_plugin.py MyProvider --with-schema
-```
+**Quick Start**: Copy the template in
+`examples/custom_provider_plugin/` and customize it for your provider.
 
 ## Architecture Overview
 
@@ -86,13 +83,13 @@ Ships with langextract, dependencies included:
 - **Gemini** (`gemini.py`): Google's Gemini models
 - **Ollama** (`ollama.py`): Local models via Ollama
 
-### 2. Built-in Provider with Optional Dependencies
+### 2. Built-in Provider
 
-Ships with langextract, but requires extra installation:
+Ships with langextract:
 
 - **OpenAI** (`openai.py`): OpenAI's GPT models
   - Code included in package
-  - Requires: `pip install langextract[openai]` to install OpenAI SDK
+  - Requires: `pip install openai` if missing in your environment
   - Future: May be moved to external plugin package
 
 ### 3. External Plugins (Third-party)
@@ -320,7 +317,6 @@ yourprovider = "langextract_yourprovider:YourProviderLanguageModel"
 - [ ] Test in clean environment
 - [ ] Publish to PyPI with `twine upload dist/*`
 - [ ] Share your provider by opening an issue on [LangExtract GitHub](https://github.com/google/langextract/issues) to get feedback and help others discover it
-- [ ] Consider submitting a PR to add your provider to the community providers list (coming soon)
 
 ### Option 1: External Plugin (Recommended)
 
@@ -544,7 +540,7 @@ class MyProviderLanguageModel(lx.inference.BaseLanguageModel):
 
 ```python
 # In langextract/providers/__init__.py
-from langextract.providers import myprovider  # noqa: F401
+from langextract.providers import myprovider as _myprovider
 ```
 
 1. Submit a pull request with:
@@ -604,7 +600,7 @@ ValueError: No provider registered for model_id='unknown-model'
 InferenceConfigError: OpenAI provider requires openai package
 ```
 
-**Solution**: Install optional dependencies: `pip install langextract[openai]`
+**Solution**: Install the OpenAI SDK: `pip install openai`
 
 ### Schema Not Working
 

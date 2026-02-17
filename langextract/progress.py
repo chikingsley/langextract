@@ -199,12 +199,11 @@ def create_load_progress_bar(
             unit_scale=True,
             disable=disable,
         )
-    else:
-        return tqdm.tqdm(
-            desc=(f"{BLUE}{BOLD}LangExtract{RESET}: Loading {GREEN}{filename}{RESET}"),
-            unit=" docs",
-            disable=disable,
-        )
+    return tqdm.tqdm(
+        desc=(f"{BLUE}{BOLD}LangExtract{RESET}: Loading {GREEN}{filename}{RESET}"),
+        unit=" docs",
+        disable=disable,
+    )
 
 
 def print_save_complete(num_docs: int, file_path: str) -> None:

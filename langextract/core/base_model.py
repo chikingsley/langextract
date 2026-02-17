@@ -14,16 +14,19 @@
 
 """Base interfaces for language models."""
 
+from __future__ import annotations
 
 import abc
 import json
-from collections.abc import Iterator, Mapping, Sequence
-from typing import Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
 import yaml
 
 from langextract.core import schema as schema_lib
 from langextract.core import types
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator, Mapping, Sequence
 
 __all__ = ["BaseLanguageModel"]
 
@@ -176,7 +179,6 @@ class BaseLanguageModel(abc.ABC):
         try:
             if format_type == types.FormatType.JSON:
                 return json.loads(output)
-            else:
-                return yaml.safe_load(output)
+            return yaml.safe_load(output)
         except Exception as e:
             raise ValueError(f"Failed to parse output as {format_type.name}: {e!s}") from e

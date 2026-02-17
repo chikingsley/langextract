@@ -26,16 +26,18 @@ Usage example:
 
 import collections
 import contextlib
-import time
-from collections.abc import Iterable, Iterator
-
 import logging
+import time
+from typing import TYPE_CHECKING
 
 from langextract import chunking, progress, prompting
 from langextract import resolver as resolver_lib
 from langextract.core import base_model, data, exceptions
 from langextract.core import format_handler as fh
 from langextract.core import tokenizer as tokenizer_lib
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable, Iterator
 
 
 def _merge_non_overlapping_extractions(
@@ -114,6 +116,7 @@ def _document_chunk_iterator(
     max_char_buffer: int,
     restrict_repeats: bool = True,
     tokenizer: tokenizer_lib.Tokenizer | None = None,
+    known_abbreviations: set[str] | None = None,
 ) -> Iterator[chunking.TextChunk]:
     """Iterates over documents to yield text chunks along with the document ID.
 
@@ -123,6 +126,8 @@ def _document_chunk_iterator(
       restrict_repeats: Whether to restrict the same document id from being
         visited more than once.
       tokenizer: Optional tokenizer instance.
+      known_abbreviations: Optional abbreviations that should not terminate
+        sentences.
 
     Yields:
       TextChunk containing document ID for a corresponding document.
@@ -146,6 +151,7 @@ def _document_chunk_iterator(
             max_char_buffer=max_char_buffer,
             document=document,
             tokenizer_impl=tokenizer or tokenizer_lib.RegexTokenizer(),
+            known_abbreviations=known_abbreviations,
         )
         visited_ids.add(document_id)
 
@@ -207,6 +213,7 @@ class Annotator:
         context_window_chars: int | None = None,
         show_progress: bool = True,
         tokenizer: tokenizer_lib.Tokenizer | None = None,
+        known_abbreviations: set[str] | None = None,
         **kwargs,
     ) -> Iterator[data.AnnotatedDocument]:
         """Annotates a sequence of documents with NLP extractions.
@@ -234,6 +241,8 @@ class Annotator:
             resolution across chunk boundaries. Defaults to None (disabled).
           show_progress: Whether to show progress bar. Defaults to True.
           tokenizer: Optional tokenizer to use. If None, uses default tokenizer.
+          known_abbreviations: Optional abbreviations that should not terminate
+            sentences.
           **kwargs: Additional arguments passed to LanguageModel.infer and Resolver.
 
         Yields:
@@ -255,6 +264,7 @@ class Annotator:
                 show_progress,
                 context_window_chars=context_window_chars,
                 tokenizer=tokenizer,
+                known_abbreviations=known_abbreviations,
                 **kwargs,
             )
         else:
@@ -268,6 +278,7 @@ class Annotator:
                 show_progress,
                 context_window_chars=context_window_chars,
                 tokenizer=tokenizer,
+                known_abbreviations=known_abbreviations,
                 **kwargs,
             )
 
@@ -281,6 +292,7 @@ class Annotator:
         show_progress: bool = True,
         context_window_chars: int | None = None,
         tokenizer: tokenizer_lib.Tokenizer | None = None,
+        known_abbreviations: set[str] | None = None,
         **kwargs,
     ) -> Iterator[data.AnnotatedDocument]:
         """Single-pass annotation with stable ordering and streaming emission.
@@ -332,7 +344,10 @@ class Annotator:
                 next_emit_idx += 1
 
         chunk_iter = _document_chunk_iterator(
-            _capture_docs(documents), max_char_buffer, tokenizer=tokenizer
+            _capture_docs(documents),
+            max_char_buffer,
+            tokenizer=tokenizer,
+            known_abbreviations=known_abbreviations,
         )
         batches = chunking.make_batches_of_textchunk(chunk_iter, batch_length)
 
@@ -431,6 +446,7 @@ class Annotator:
         show_progress: bool = True,
         context_window_chars: int | None = None,
         tokenizer: tokenizer_lib.Tokenizer | None = None,
+        known_abbreviations: set[str] | None = None,
         **kwargs,
     ) -> Iterator[data.AnnotatedDocument]:
         """Sequential extraction passes logic for improved recall."""
@@ -465,6 +481,7 @@ class Annotator:
                 show_progress=show_progress if pass_num == 0 else False,
                 context_window_chars=context_window_chars,
                 tokenizer=tokenizer,
+                known_abbreviations=known_abbreviations,
                 **kwargs,
             ):
                 doc_id = annotated_doc.document_id
@@ -512,6 +529,7 @@ class Annotator:
         context_window_chars: int | None = None,
         show_progress: bool = True,
         tokenizer: tokenizer_lib.Tokenizer | None = None,
+        known_abbreviations: set[str] | None = None,
         **kwargs,
     ) -> data.AnnotatedDocument:
         """Annotates text with NLP extractions for text input.
@@ -533,6 +551,8 @@ class Annotator:
             (disabled).
           show_progress: Whether to show progress bar. Defaults to True.
           tokenizer: Optional tokenizer instance.
+          known_abbreviations: Optional abbreviations that should not terminate
+            sentences.
           **kwargs: Additional arguments for inference and resolver_lib.
 
         Returns:
@@ -564,6 +584,7 @@ class Annotator:
                 context_window_chars=context_window_chars,
                 show_progress=show_progress,
                 tokenizer=tokenizer,
+                known_abbreviations=known_abbreviations,
                 **kwargs,
             )
         )
@@ -574,7 +595,7 @@ class Annotator:
         if debug and annotations[0].extractions:
             elapsed_time = time.time() - start_time if start_time else None
             num_extractions = len(annotations[0].extractions)
-            unique_classes = len(set(e.extraction_class for e in annotations[0].extractions))
+            unique_classes = len({e.extraction_class for e in annotations[0].extractions})
             num_chunks = len(text) // max_char_buffer + (1 if len(text) % max_char_buffer else 0)
 
             progress.print_extraction_summary(

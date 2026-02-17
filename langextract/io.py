@@ -15,21 +15,21 @@
 """Supports Input and Output Operations for Data Annotations."""
 
 import abc
+import csv
 import dataclasses
 import ipaddress
 import json
-import os
-import pathlib
-from collections.abc import Iterator
-from typing import Any
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
 from urllib import parse as urlparse
-
-import csv
 
 import httpx
 
 from langextract import data_lib, progress
 from langextract.core import data, exceptions
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 DEFAULT_TIMEOUT_SECONDS = 30
 
@@ -42,7 +42,7 @@ class InvalidDatasetError(exceptions.LangExtractError):
 class Dataset(abc.ABC):
     """A dataset for inputs to LLM Labeler."""
 
-    input_path: pathlib.Path
+    input_path: Path
     id_key: str
     text_key: str
 
@@ -60,7 +60,7 @@ class Dataset(abc.ABC):
           InvalidDatasetError: If the dataset is empty or invalid.
           NotImplementedError: If the file type is not supported.
         """
-        if not os.path.exists(self.input_path):
+        if not self.input_path.exists():
             raise OSError(f"File does not exist: {self.input_path}")
 
         if str(self.input_path).endswith(".csv"):
@@ -83,7 +83,7 @@ class Dataset(abc.ABC):
 
 def save_annotated_documents(
     annotated_documents: Iterator[data.AnnotatedDocument],
-    output_dir: pathlib.Path | str | None = None,
+    output_dir: Path | str | None = None,
     output_name: str = "data.jsonl",
     show_progress: bool = True,
 ) -> None:
@@ -100,7 +100,7 @@ def save_annotated_documents(
       IOError: If the output directory cannot be created.
       InvalidDatasetError: If no documents are produced.
     """
-    output_dir = pathlib.Path("test_output") if output_dir is None else pathlib.Path(output_dir)
+    output_dir = Path("test_output") if output_dir is None else Path(output_dir)
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -113,7 +113,7 @@ def save_annotated_documents(
         output_path=str(output_file), disable=not show_progress
     )
 
-    with open(output_file, "w", encoding="utf-8") as f:
+    with output_file.open("w", encoding="utf-8") as f:
         for adoc in annotated_documents:
             if not adoc.document_id:
                 continue
@@ -134,7 +134,7 @@ def save_annotated_documents(
 
 
 def load_annotated_documents_jsonl(
-    jsonl_path: pathlib.Path,
+    jsonl_path: Path,
     show_progress: bool = True,
 ) -> Iterator[data.AnnotatedDocument]:
     """Loads annotated documents from a JSON Lines file.
@@ -149,11 +149,11 @@ def load_annotated_documents_jsonl(
     Raises:
       IOError: If the file does not exist or is invalid.
     """
-    if not os.path.exists(jsonl_path):
+    if not jsonl_path.exists():
         raise OSError(f"File does not exist: {jsonl_path}")
 
     # Get file size for progress bar
-    file_size = os.path.getsize(jsonl_path)
+    file_size = jsonl_path.stat().st_size
 
     # Create progress bar
     progress_bar = progress.create_load_progress_bar(
@@ -165,7 +165,7 @@ def load_annotated_documents_jsonl(
     doc_count = 0
     bytes_read = 0
 
-    with open(jsonl_path, encoding="utf-8") as f:
+    with jsonl_path.open(encoding="utf-8") as f:
         for line in f:
             line_bytes = len(line.encode("utf-8"))
             bytes_read += line_bytes
@@ -185,7 +185,7 @@ def load_annotated_documents_jsonl(
 
 
 def _read_csv(
-    filepath: pathlib.Path, column_names: list[str], delimiter: str = ","
+    filepath: Path, column_names: list[str], delimiter: str = ","
 ) -> Iterator[dict[str, Any]]:
     """Reads a CSV file and yields rows as dicts.
 
@@ -201,11 +201,11 @@ def _read_csv(
       IOError: If the file does not exist.
       InvalidDatasetError: If the dataset is empty or invalid.
     """
-    if not os.path.exists(filepath):
+    if not filepath.exists():
         raise OSError(f"File does not exist: {filepath}")
 
     try:
-        with open(filepath, encoding="utf-8", newline="") as f:
+        with filepath.open(encoding="utf-8", newline="") as f:
             reader = csv.DictReader(f, delimiter=delimiter)
             if reader.fieldnames is None:
                 raise InvalidDatasetError(f"Empty dataset: {filepath}")
@@ -292,7 +292,8 @@ def download_text_from_url(
 
             # Check content type
             content_type = response.headers.get("Content-Type", "").lower()
-            if not any(ct in content_type for ct in ["text/", "application/json", "application/xml"]):
+            allowed_content_types = ["text/", "application/json", "application/xml"]
+            if not any(ct in content_type for ct in allowed_content_types):
                 print(f"Warning: Content-Type '{content_type}' may not be text-based")
 
             # Get content length for progress bar

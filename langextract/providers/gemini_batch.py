@@ -14,41 +14,24 @@
 
 """Gemini Batch API helper module for LangExtract.
 
-This module provides batch inference support using the google-genai SDK.
-It handles:
-- File-based batch submission for all batch sizes
+This module provides batch inference support using the google-genai SDK's
+inline batch API. It handles:
+- Inline batch submission (no GCS required)
 - Job polling and result extraction
 - Schema-based structured output
 - Order preservation across batch processing
 """
 
-
-import concurrent.futures
 import dataclasses
-import enum
-import hashlib
-import json
 import logging
-import os
-import re
-import tempfile
 import time
-import uuid
-from collections.abc import Callable, Iterator, Sequence
-from contextlib import suppress
+from collections.abc import Callable, Sequence
 from typing import Any, Protocol
+
 from google import genai
-from google.api_core import exceptions as google_exceptions
-from google.cloud import storage
 
 from langextract.core import exceptions
 
-_MIME_TYPE_JSON = "application/json"
-_DEFAULT_LOCATION = "us-central1"
-_EXT_JSON = ".json"
-_EXT_JSONL = ".jsonl"
-_KEY_IDX = "idx-"
-_CACHE_PREFIX = "cache"
 _UNSET = object()
 
 
@@ -63,8 +46,6 @@ class BatchConfig:
       timeout: Maximum seconds to wait for job completion.
       max_prompts_per_job: Max prompts allowed in one batch job.
       ignore_item_errors: If True, continue on per-item errors.
-      enable_caching: If True, use GCS-based caching for inference results.
-      retention_days: Days to keep GCS data (default 30). None for permanent.
     """
 
     enabled: bool = False
@@ -73,17 +54,13 @@ class BatchConfig:
     timeout: int = 3600
     max_prompts_per_job: int = 20000
     ignore_item_errors: bool = False
-    enable_caching: bool | None = _UNSET  # type: ignore
-    retention_days: int | None = _UNSET  # type: ignore
     on_job_create: Callable[[Any], None] | None = None
 
     def __post_init__(self):
         """Validate numeric knobs early."""
-
         validations = [
             (self.threshold >= 1, "batch.threshold must be >= 1"),
             (self.poll_interval > 0, "batch.poll_interval must be > 0"),
-            (self.timeout > 0, "batch.timeout must be > 0"),
             (self.timeout > 0, "batch.timeout must be > 0"),
             (
                 self.max_prompts_per_job > 0,
@@ -93,22 +70,6 @@ class BatchConfig:
         for is_valid, error_msg in validations:
             if not is_valid:
                 raise ValueError(error_msg)
-
-        if self.enabled:
-            if self.enable_caching is _UNSET:
-                raise ValueError(
-                    "batch.enable_caching must be explicitly set when batch is enabled"
-                )
-            if self.retention_days is _UNSET:
-                raise ValueError(
-                    "batch.retention_days must be explicitly set when batch is enabled"
-                    " (use None for permanent)"
-                )
-            if self.retention_days is not None and self.retention_days <= 0:
-                raise ValueError(
-                    "batch.retention_days must be > 0 or None (for permanent). "
-                    "0 (immediate delete) is not allowed."
-                )
 
     @classmethod
     def from_dict(cls, d: dict | None) -> BatchConfig:
@@ -144,329 +105,72 @@ _TERMINAL_OK = frozenset(
 
 def _default_job_create_callback(job: Any) -> None:
     """Default callback to log batch job details."""
-    logging.info("Batch job created successfully: %s", job.name)
-    logging.info("Job State: %s", job.state)
-    # Extract project and job ID for console URL
-    try:
-        # job.name format: projects/{project}/locations/{location}/batchPredictionJobs/{job_id}
-        parts = job.name.split("/")
-        if len(parts) >= 6:
-            job_id = parts[-1]
-            location = parts[3]
-            project = parts[1]
-            logging.info(
-                "Job Console URL:"
-                " https://console.cloud.google.com/vertex-ai/locations/%s/batch-predictions/%s?project=%s",
-                location,
-                job_id,
-                project,
-            )
-    except Exception:
-        pass
+    logging.info("Batch job created: %s (state: %s)", job.name, job.state)
 
 
-def _snake_to_camel(key: str) -> str:
-    """Convert snake_case to camelCase for REST API compatibility."""
-    parts = key.split("_")
-    return parts[0] + "".join(p.title() for p in parts[1:])
-
-
-def _is_vertexai_client(client) -> bool:
-    """Check if client is configured for Vertex AI with explicit identity check.
-
-    Args:
-      client: The genai.Client instance to check.
-
-    Returns:
-      True if client.vertexai is explicitly True, False otherwise.
-    """
-    return getattr(client, "vertexai", False) is True
-
-
-def _get_project_location(
-    client: genai.Client,
-    project: str | None = None,
-    location: str | None = None,
-) -> tuple[str | None, str]:
-    """Extract project and location from client or arguments."""
-    # Try to get from client (if available in future versions) or env.
-    proj = project or (getattr(client, "project", None) or os.getenv("GOOGLE_CLOUD_PROJECT"))
-
-    loc = location or (getattr(client, "location", None) or _DEFAULT_LOCATION)
-
-    return proj, loc
-
-
-def _get_bucket_name(project: str | None, location: str) -> str:
-    """Generate consistent GCS bucket name for batch operations."""
-    base = f"langextract-{project}-{location}-batch".lower()
-    return re.sub(r"[^a-z0-9._-]", "-", base)
-
-
-def _ensure_bucket_lifecycle(bucket: storage.Bucket, retention_days: int | None) -> None:
-    """Ensure bucket has a lifecycle rule to delete objects after retention_days.
-
-    This is a best-effort optimization to reduce storage costs. It checks if
-    a rule with the exact age exists, and if not, adds it. It does NOT remove
-    existing rules.
-
-    Args:
-      bucket: The GCS bucket to configure.
-      retention_days: Number of days to keep objects. If None, no rule is added.
-    """
-    if retention_days is None or retention_days <= 0:
-        return
-
-    # Check if rule already exists
-    for rule in bucket.lifecycle_rules:
-        if (
-            rule.get("action", {}).get("type") == "Delete"
-            and rule.get("condition", {}).get("age") == retention_days
-        ):
-            return
-
-    # Add new rule
-    bucket.add_lifecycle_delete_rule(age=retention_days)
-    try:
-        bucket.patch()
-        logging.info(
-            "Added lifecycle rule to bucket %s: delete after %d days",
-            bucket.name,
-            retention_days,
-        )
-    except Exception as e:
-        logging.warning("Failed to update lifecycle rule for bucket %s: %s", bucket.name, e)
-
-
-def _build_request(
+def _build_inline_request(
     prompt: str,
     schema_dict: dict | None,
-    gen_config: dict | None,
+    gen_config: dict,
     system_instruction: str | None = None,
     safety_settings: Sequence[Any] | None = None,
-) -> dict:
-    """Build a batch request in REST format for file-based submission.
-
-    Constructs a properly formatted request dictionary for batch processing.
-    Per the Gemini Batch API documentation, each request in the JSONL file
-    can include its own generationConfig with schema and generation parameters,
-    as well as top-level systemInstruction and safetySettings.
+) -> genai.types.InlinedRequest:
+    """Build an InlinedRequest for batch submission.
 
     Args:
-      prompt: The text prompt to send to the model.
+      prompt: The text prompt.
       schema_dict: Optional JSON schema for structured output.
-      gen_config: Optional generation configuration parameters.
-      system_instruction: Optional system instruction text.
-      safety_settings: Optional safety settings sequence.
+      gen_config: Generation config parameters (temperature, top_p, etc).
+      system_instruction: Optional system instruction.
+      safety_settings: Optional safety settings.
 
     Returns:
-      A dictionary formatted for REST API file-based submission, containing:
-        * contents: The prompt content.
-        * systemInstruction: Optional system instructions.
-        * safetySettings: Optional safety settings.
-        * generationConfig: Optional generation configuration and schema.
+      InlinedRequest ready for batch submission.
     """
-    request = {"contents": [{"role": "user", "parts": [{"text": prompt}]}]}
+    config_kwargs: dict[str, Any] = {}
+
+    if gen_config:
+        config_kwargs.update(gen_config)
+
+    if schema_dict:
+        config_kwargs["response_mime_type"] = "application/json"
+        config_kwargs["response_schema"] = schema_dict
 
     if system_instruction:
-        request["systemInstruction"] = {"parts": [{"text": system_instruction}]}
+        config_kwargs["system_instruction"] = system_instruction
 
     if safety_settings:
-        request["safetySettings"] = safety_settings
+        config_kwargs["safety_settings"] = safety_settings
 
-    if schema_dict or gen_config:
-        generation_config = {}
-        if schema_dict:
-            generation_config["responseMimeType"] = _MIME_TYPE_JSON
-            generation_config["responseSchema"] = schema_dict
-        if gen_config:
-            for k, v in gen_config.items():
-                generation_config[_snake_to_camel(k)] = v
-        request["generationConfig"] = generation_config
-
-    return request
+    return genai.types.InlinedRequest(
+        contents=prompt,
+        config=genai.types.GenerateContentConfig(**config_kwargs) if config_kwargs else None,
+    )
 
 
-def _submit_file(
+def _submit_inline(
     client: genai.Client,
     model_id: str,
-    requests: Sequence[dict],
+    requests: Sequence[genai.types.InlinedRequest],
     display: str,
-    retention_days: int | None,
-    project: str | None = None,
-    location: str | None = None,
 ) -> genai.types.BatchJob:
-    """Submit a file-based batch job to Vertex AI using GCS storage.
-
-    Batch processing is only supported with Vertex AI because it requires
-    GCS for file upload. Creates JSONL file, uploads to auto-created bucket,
-    and submits job for async processing.
+    """Submit an inline batch job.
 
     Args:
-      client: google.genai.Client instance configured for Vertex AI
-          (must have client.vertexai=True).
+      client: google.genai.Client instance.
       model_id: Model identifier (e.g., "gemini-2.5-flash").
-      requests: List of request dictionaries with embedded configuration.
-          Each request contains contents and optional generationConfig
-          (including schema and generation parameters).
-      display: Display name for the batch job, used for identification and
-          as part of the GCS blob name.
-      retention_days: Days to keep GCS data. If set, applies lifecycle rule.
-      project: Optional GCP project ID. If not provided, will attempt to
-          determine from client or environment.
-      location: Optional GCP region/location. If not provided, will attempt to
-          determine from client or use default.
+      requests: List of InlinedRequest objects.
+      display: Display name for the batch job.
 
     Returns:
-      BatchJob object that can be polled for completion status.
-
-    Raises:
-      ValueError: If client is not configured for Vertex AI.
+      BatchJob object that can be polled for completion.
     """
-    path = None
-    try:
-        with tempfile.NamedTemporaryFile(
-            "w", suffix=_EXT_JSONL, delete=False, encoding="utf-8"
-        ) as f:
-            path = f.name
-            for idx, req in enumerate(requests):
-                # We use a simple "idx-{N}" key format to track the original order
-                # of prompts, as batch processing may return results out of order.
-                line = {"key": f"{_KEY_IDX}{idx}", "request": req}
-                f.write(json.dumps(line, ensure_ascii=False) + "\n")
-
-        project, location = _get_project_location(client, project, location)
-        bucket_name = _get_bucket_name(project, location)
-        blob_name = f"batch-input/{display}-{uuid.uuid4().hex}.jsonl"
-
-        storage_client = storage.Client(project=project)
-        try:
-            bucket = storage_client.create_bucket(bucket_name, location=location)
-            logging.info("Created GCS bucket: %s", bucket_name)
-        except google_exceptions.Conflict:
-            bucket = storage_client.bucket(bucket_name)
-            logging.info("Using existing GCS bucket: %s", bucket_name)
-
-        if retention_days:
-            _ensure_bucket_lifecycle(bucket, retention_days)
-
-        blob = bucket.blob(blob_name)
-        blob.upload_from_filename(path)
-
-        gcs_uri = f"gs://{bucket.name}/{blob.name}"
-
-        # Create batch job (config and schema are in per-request generationConfig)
-        job = client.batches.create(model=model_id, src=gcs_uri, config={"display_name": display})
-        return job
-    finally:
-        if path:
-            with suppress(OSError):
-                os.unlink(path)
-
-
-class GCSBatchCache:
-    """GCS-based cache for batch inference results."""
-
-    def __init__(self, bucket_name: str, project: str | None = None):
-        self.bucket_name = bucket_name
-        self.project = project
-        self._client = storage.Client(project=project)
-        self._bucket = self._client.bucket(bucket_name)
-
-    def _compute_hash(self, key_data: dict) -> str:
-        """Compute SHA256 hash of the canonicalized request data."""
-        canonical_json = json.dumps(key_data, sort_keys=True, ensure_ascii=False)
-        return hashlib.sha256(canonical_json.encode("utf-8")).hexdigest()
-
-    def _get_single(self, key_hash: str) -> str | None:
-        """Fetch single item from GCS."""
-        blob = self._bucket.blob(f"{_CACHE_PREFIX}/{key_hash}{_EXT_JSON}")
-        try:
-            data = json.loads(blob.download_as_text())
-            return data.get("text")
-        except google_exceptions.NotFound:
-            return None
-        except Exception as e:
-            logging.warning("Cache read error for %s: %s", key_hash, e)
-        return None
-
-    def get_multi(self, key_data_list: Sequence[dict]) -> dict[int, str]:
-        """Fetch multiple items from GCS in parallel.
-
-        Returns:
-          Dict mapping index in key_data_list to cached text.
-        """
-        results = {}
-        # Limit max_workers to 10 to match default HTTP connection pool size.
-        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
-            future_to_idx = {}
-            for idx, key_data in enumerate(key_data_list):
-                key_hash = self._compute_hash(key_data)
-                future = executor.submit(self._get_single, key_hash)
-                future_to_idx[future] = idx
-
-            for future in concurrent.futures.as_completed(future_to_idx):
-                idx = future_to_idx[future]
-                text = future.result()
-                if text is not None:
-                    results[idx] = text
-        return results
-
-    def set_multi(self, items: Sequence[tuple[dict, str]]) -> None:
-        """Upload multiple items to GCS in parallel.
-
-        Args:
-          items: List of (key_data, result_text) tuples.
-        """
-
-        def _upload(text: str, key_data: dict):
-            key_hash = self._compute_hash(key_data)
-            blob = self._bucket.blob(f"{_CACHE_PREFIX}/{key_hash}{_EXT_JSON}")
-            try:
-                blob.upload_from_string(
-                    json.dumps({"text": text}, ensure_ascii=False),
-                    content_type=_MIME_TYPE_JSON,
-                )
-            except Exception as e:
-                logging.warning("Cache write error for %s: %s", key_hash, e, exc_info=True)
-
-        def _json_default(obj):
-            if dataclasses.is_dataclass(obj):
-                return dataclasses.asdict(obj)
-            if isinstance(obj, enum.Enum):
-                return obj.value
-            raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
-
-        with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
-            for key_data, text in items:
-                # If text is not a string, try to serialize it
-                if not isinstance(text, str):
-                    try:
-                        text = json.dumps(text, default=_json_default, ensure_ascii=False)
-                    except Exception as e:
-                        logging.warning("Serialization error: %s", e)
-                        continue
-
-                executor.submit(_upload, text, key_data)
-
-    def iter_items(self) -> Iterator[tuple[str, str]]:
-        """Iterate over all items in the cache.
-
-        Yields:
-          Tuple of (key_hash, text_content).
-        """
-        blobs = self._bucket.list_blobs(prefix=f"{_CACHE_PREFIX}/")
-        for blob in blobs:
-            if not blob.name.endswith(_EXT_JSON):
-                continue
-            try:
-                key_hash = blob.name.split("/")[-1].replace(_EXT_JSON, "")
-                data = json.loads(blob.download_as_text())
-                text = data.get("text")
-                if text is not None:
-                    yield key_hash, text
-            except (json.JSONDecodeError, Exception) as e:
-                logging.warning("Failed to read cache item %s: %s", blob.name, e)
+    job = client.batches.create(
+        model=model_id,
+        src=list(requests),
+        config=genai.types.CreateBatchJobConfig(display_name=display),
+    )
+    return job
 
 
 class _TextResponse(Protocol):
@@ -475,38 +179,13 @@ class _TextResponse(Protocol):
     text: str
 
 
-def _safe_get_nested(data: dict, *keys) -> Any:
-    """Safely traverse nested dictionaries/lists.
-
-    Args:
-      data: The dict to traverse.
-      *keys: Keys/indices to access. Use integers for list indices.
-
-    Returns:
-      The value at the path, or None if any key doesn't exist.
-    """
-    current = data
-    for key in keys:
-        if current is None:
-            return None
-        if isinstance(key, int):
-            if not isinstance(current, list) or len(current) <= key:
-                return None
-            current = current[key]
-        else:
-            if not isinstance(current, dict):
-                return None
-            current = current.get(key)
-    return current
-
-
 def _extract_text(
     resp: _TextResponse | dict[str, Any] | None,
 ) -> tuple[str | None, dict[str, int] | None]:
-    """Extract text and usage from Vertex AI batch API response.
+    """Extract text and usage from batch API response.
 
     Args:
-      resp: Response object (inline) or dict (file) containing text.
+      resp: Response object containing text.
 
     Returns:
       Tuple of (text string, usage dict) or (None, None) if invalid.
@@ -523,9 +202,7 @@ def _extract_text(
             text = val
 
     if isinstance(resp, dict):
-        # Vertex AI format: {"candidates": [{"content": {"parts": [{"text": "..."}]}}]}
         text = _safe_get_nested(resp, "candidates", 0, "content", "parts", 0, "text")
-
         usage_meta = _safe_get_nested(resp, "usageMetadata")
         if isinstance(usage_meta, dict):
             usage = {
@@ -535,6 +212,23 @@ def _extract_text(
             }
 
     return (text if isinstance(text, str) else None), usage
+
+
+def _safe_get_nested(data: dict, *keys) -> Any:
+    """Safely traverse nested dictionaries/lists."""
+    current = data
+    for key in keys:
+        if current is None:
+            return None
+        if isinstance(key, int):
+            if not isinstance(current, list) or len(current) <= key:
+                return None
+            current = current[key]
+        else:
+            if not isinstance(current, dict):
+                return None
+            current = current.get(key)
+    return current
 
 
 def _poll_completion(
@@ -551,8 +245,7 @@ def _poll_completion(
       Completed batch job object.
 
     Raises:
-      RuntimeError: If the job enters a failed terminal state.
-      TimeoutError: If the job does not complete within cfg.timeout.
+      InferenceRuntimeError: If the job fails or times out.
     """
     start = time.time()
     name = job.name
@@ -582,154 +275,39 @@ def _poll_completion(
             )
 
         time.sleep(cfg.poll_interval)
-        logging.info("Batch job is running... (State: %s)", state.name)
+        logging.info("Batch job running... (state: %s)", state.name)
 
 
-def _parse_batch_line(
-    line: str, outputs: dict[int, tuple[str, dict[str, int] | None]], cfg: BatchConfig
-) -> None:
-    """Parse a single line from batch output JSONL."""
-
-    try:
-        obj = json.loads(line)
-
-    except json.JSONDecodeError:
-        return
-
-    error = obj.get("error")
-
-    if error and not cfg.ignore_item_errors:
-        code = error.get("code") if isinstance(error, dict) else None
-
-        if code not in (None, 0):
-            raise exceptions.InferenceRuntimeError(f"Batch item error: {error}")
-
-    resp = obj.get("response", {})
-
-    text, usage = _extract_text(resp)
-
-    text = text or ""
-
-    key = obj.get("key", "")
-
-    try:
-        # Extract the original index from the key (e.g., "idx-5" -> 5)
-
-        idx = int(str(key).rsplit(_KEY_IDX, maxsplit=1)[-1])
-
-    except (ValueError, IndexError):
-        idx = max(outputs.keys(), default=-1) + 1
-
-    outputs[idx] = (text, usage)
-
-
-def _extract_from_file(
-    client: genai.Client,
+def _extract_inline_results(
     job: genai.types.BatchJob,
     cfg: BatchConfig,
     expected_count: int,
 ) -> list[tuple[str, dict[str, int] | None]]:
-    """Extract text outputs from file-based batch results, preserving order.
-
-
-
-
-
-    Reads results from GCS output directory.
-
-
-
-
+    """Extract text outputs from inline batch results, preserving order.
 
     Args:
-
-
-      client: google.genai.Client instance for downloading result file.
-
-
-      job: Completed batch job object with result location.
-
-
+      job: Completed batch job object.
       cfg: Batch configuration including error handling settings.
-
-
-      expected_count: Number of prompts submitted (for order preservation).
-
-
-
-
+      expected_count: Number of prompts submitted.
 
     Returns:
-
-
-      List of (text, usage) tuples corresponding 1:1 to input prompts. Missing results
-
-
-      are padded with empty strings and None usage.
-
-
-
-
-
-    Raises:
-
-
-      RuntimeError: If job is missing result location or item has error.
-
-
+      List of (text, usage) tuples corresponding 1:1 to input prompts.
     """
+    outputs: list[tuple[str, dict[str, int] | None]] = []
 
-    if not _is_vertexai_client(client):
-        raise ValueError("Batch API is only supported with Vertex AI.")
+    # Inline batch results are available on the job object directly
+    # via job.dest or the response attribute, in submission order
+    responses = getattr(job, "responses", None) or []
 
-    outputs_by_idx: dict[int, tuple[str, dict[str, int] | None]] = {}
+    for resp in responses:
+        text, usage = _extract_text(resp)
+        outputs.append((text or "", usage))
 
-    if not job.dest:
-        raise exceptions.InferenceRuntimeError("Vertex AI batch job missing dest")
+    # Pad if responses are fewer than expected
+    while len(outputs) < expected_count:
+        outputs.append(("", None))
 
-    gcs_uri = getattr(job.dest, "gcs_uri", None) or getattr(job.dest, "gcs_output_directory", None)
-
-    if not gcs_uri:
-        raise exceptions.InferenceRuntimeError("Vertex AI batch job missing output GCS URI")
-
-    if not gcs_uri.startswith("gs://"):
-        raise exceptions.InferenceRuntimeError(f"Invalid GCS URI format: {gcs_uri}")
-
-    bucket_name, _, prefix = gcs_uri[5:].partition("/")
-
-    project = getattr(client, "project", None) or os.getenv("GOOGLE_CLOUD_PROJECT")
-
-    storage_client = storage.Client(project=project)
-
-    bucket = storage_client.bucket(bucket_name)
-
-    # Vertex AI may write multiple output files.
-
-    blobs = list(bucket.list_blobs(prefix=prefix))
-
-    if not blobs:
-        raise exceptions.InferenceRuntimeError(f"No output files found in {gcs_uri}")
-
-    logging.info("Batch API: Downloading results from %s", gcs_uri)
-
-    logging.info("Batch API: Found %d output files", len(blobs))
-
-    for blob in blobs:
-        if not blob.name.endswith(_EXT_JSONL):
-            continue
-
-        # Stream file line by line to avoid loading entire file into memory.
-
-        with blob.open("r", encoding="utf-8") as f:
-            for line in f:
-                if not line.strip():
-                    continue
-
-                _parse_batch_line(line, outputs_by_idx, cfg)
-
-    logging.info("Batch API: Parsed %d results", len(outputs_by_idx))
-
-    return [outputs_by_idx.get(i, ("", None)) for i in range(expected_count)]
+    return outputs[:expected_count]
 
 
 def infer_batch(
@@ -741,178 +319,72 @@ def infer_batch(
     cfg: BatchConfig,
     system_instruction: str | None = None,
     safety_settings: Sequence[Any] | None = None,
-    project: str | None = None,
-    location: str | None = None,
+    **_kwargs: Any,
 ) -> list[tuple[str, dict[str, int] | None]]:
-    """Execute batch inference on multiple prompts using the Vertex AI Batch API.
+    """Execute batch inference on multiple prompts using the Gemini Batch API.
 
-    This function provides file-based batch processing via Vertex AI. It:
-    - Uploads prompts to GCS (Google Cloud Storage)
-    - Submits batch job to Vertex AI
-    - Polls for job completion
-    - Extracts and returns results
+    Uses inline batch submission (no GCS/Vertex AI required).
 
     Args:
-      client: google.genai.Client instance configured for Vertex AI
-          (must have client.vertexai=True).
+      client: google.genai.Client instance.
       model_id: Model identifier (e.g., "gemini-2.5-flash").
       prompts: Sequence of prompts to process in batch.
-      schema_dict: Optional JSON schema for structured output. When provided,
-          enables JSON mode with the specified schema constraints.
-      gen_config: Generation configuration parameters (temperature, top_p, etc.).
-      cfg: Batch configuration including thresholds, timeouts, and error handling.
+      schema_dict: Optional JSON schema for structured output.
+      gen_config: Generation configuration parameters.
+      cfg: Batch configuration including thresholds and timeouts.
       system_instruction: Optional system instruction text.
       safety_settings: Optional safety settings sequence.
-      project: Google Cloud project ID (optional, overrides client/env).
-      location: Vertex AI location (optional, overrides client/env).
 
     Returns:
-      List of text outputs corresponding 1:1 to input prompts. Missing results
-      are padded with empty strings.
+      List of (text, usage) tuples corresponding 1:1 to input prompts.
 
     Raises:
-      RuntimeError: If batch job fails or individual items have errors
-          (when cfg.ignore_item_errors is False).
-      TimeoutError: If batch job doesn't complete within cfg.timeout seconds.
+      InferenceRuntimeError: If batch job fails or times out.
     """
     if not prompts:
         return []
 
-    if not _is_vertexai_client(client):
-        raise ValueError(
-            "Batch API is only supported with Vertex AI. To use batch mode, create"
-            " your client with: genai.Client(vertexai=True, project='YOUR_PROJECT',"
-            " location='us-central1'). For Google AI API keys, batch mode is not"
-            " currently supported."
-        )
-
-    # Suppress verbose HTTP logs from underlying libraries
-    logging.getLogger("google.auth.transport.requests").setLevel(logging.WARNING)
-    logging.getLogger("urllib3.connectionpool").setLevel(logging.WARNING)
-    logging.getLogger("httpx").setLevel(logging.WARNING)
-    logging.getLogger("httpcore").setLevel(logging.WARNING)
-    # Force disable httpx propagation or handlers if level setting fails
-    logging.getLogger("httpx").disabled = True
+    # Suppress verbose HTTP logs
+    for logger_name in ("google.auth.transport.requests", "urllib3.connectionpool", "httpx", "httpcore"):
+        logging.getLogger(logger_name).setLevel(logging.WARNING)
 
     logging.info("Batch API: Processing %d prompts", len(prompts))
 
     display_base = f"langextract-batch-{int(time.time())}"
 
-    project, location = _get_project_location(client, project, location)
-    bucket_name = _get_bucket_name(project, location)
-
-    cache = GCSBatchCache(bucket_name, project) if cfg.enable_caching else None
-    if cache:
-        logging.info(
-            "Batch API: Using GCS bucket: https://console.cloud.google.com/storage/browser/%s",
-            bucket_name,
-        )
-
-    prompts_to_process: list[tuple[int, str]] = []
-    cached_results: dict[int, str] = {}
-
-    if cache:
-        key_data_list = []
-        for prompt in prompts:
-            key_data_list.append(
-                {
-                    "model_id": model_id,
-                    "prompt": prompt,
-                    "system_instruction": system_instruction,
-                    "gen_config": gen_config,
-                    "safety_settings": safety_settings,
-                    "schema": schema_dict,
-                }
-            )
-
-        cached_results = cache.get_multi(key_data_list)
-
-        for idx, prompt in enumerate(prompts):
-            if idx not in cached_results:
-                prompts_to_process.append((idx, prompt))
-    else:
-        prompts_to_process = list(enumerate(prompts))
-
-    if not prompts_to_process:
-        logging.info("Batch API: All %d prompts found in cache", len(prompts))
-        return [(cached_results[i], None) for i in range(len(prompts))]
-
-    logging.info(
-        "Batch API: %d cached, %d to submit",
-        len(cached_results),
-        len(prompts_to_process),
-    )
-
     def _process_batch(
         batch_items: Sequence[tuple[int, str]], display: str
     ) -> dict[int, tuple[str, dict[str, int] | None]]:
-        """Submit batch job, poll completion, and extract results.
-
-        Returns:
-          Dict mapping original index to (text, usage) tuple.
-        """
-        batch_prompts = [p for _, p in batch_items]
+        """Submit batch job, poll completion, and extract results."""
         requests = [
-            _build_request(p, schema_dict, gen_config, system_instruction, safety_settings)
-            for p in batch_prompts
+            _build_inline_request(p, schema_dict, gen_config, system_instruction, safety_settings)
+            for _, p in batch_items
         ]
-        job = _submit_file(
-            client,
-            model_id,
-            requests,
-            display,
-            cfg.retention_days,
-            project,
-            location,
-        )
+        job = _submit_inline(client, model_id, requests, display)
+
         if cfg.on_job_create:
             try:
                 cfg.on_job_create(job)
             except Exception as e:
                 logging.warning("Batch job creation callback failed: %s", e)
+
         job = _poll_completion(client, job, cfg)
         logging.info("Batch job completed successfully.")
-        results = _extract_from_file(client, job, cfg, expected_count=len(batch_prompts))
 
-        # Map results back to original indices
-        mapped_results = {}
-        for (orig_idx, _), result in zip(batch_items, results, strict=True):
-            mapped_results[orig_idx] = result
+        results = _extract_inline_results(job, cfg, expected_count=len(requests))
 
-        return mapped_results
+        return {orig_idx: result for (orig_idx, _), result in zip(batch_items, results, strict=True)}
 
+    all_items = list(enumerate(prompts))
     new_results: dict[int, tuple[str, dict[str, int] | None]] = {}
 
-    if cfg.max_prompts_per_job and len(prompts_to_process) > cfg.max_prompts_per_job:
+    if cfg.max_prompts_per_job and len(all_items) > cfg.max_prompts_per_job:
         chunk_size = cfg.max_prompts_per_job
-        for chunk_num, i in enumerate(range(0, len(prompts_to_process), chunk_size)):
-            chunk_items = prompts_to_process[i : i + chunk_size]
+        for chunk_num, i in enumerate(range(0, len(all_items), chunk_size)):
+            chunk_items = all_items[i : i + chunk_size]
             chunk_results = _process_batch(chunk_items, f"{display_base}-part-{chunk_num}")
             new_results.update(chunk_results)
     else:
-        new_results = _process_batch(prompts_to_process, display_base)
+        new_results = _process_batch(all_items, display_base)
 
-    if cache:
-        upload_list = []
-        for idx, (text, _) in new_results.items():
-            prompt = prompts[idx]
-            key_data = {
-                "model_id": model_id,
-                "prompt": prompt,
-                "system_instruction": system_instruction,
-                "gen_config": gen_config,
-                "safety_settings": safety_settings,
-                "schema": schema_dict,
-            }
-            upload_list.append((key_data, text))
-
-        cache.set_multi(upload_list)
-
-    final_outputs = []
-    for i in range(len(prompts)):
-        if i in cached_results:
-            final_outputs.append((cached_results[i], None))
-        else:
-            final_outputs.append(new_results.get(i, ("", None)))
-
-    return final_outputs
+    return [new_results.get(i, ("", None)) for i in range(len(prompts))]

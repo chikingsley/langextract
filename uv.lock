@@ -1217,20 +1217,20 @@ dependencies = [
     { name = "google-genai" },
     { name = "httpx" },
     { name = "more-itertools" },
+    { name = "onnxruntime" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "pymupdf" },
     { name = "python-dotenv" },
     { name = "pyyaml" },
+    { name = "rapidocr" },
     { name = "regex" },
     { name = "tqdm" },
 ]
 
 [package.optional-dependencies]
 all = [
-    { name = "onnxruntime" },
     { name = "openai" },
-    { name = "rapidocr" },
 ]
 dev = [
     { name = "import-linter" },
@@ -1243,10 +1243,6 @@ dev = [
 notebook = [
     { name = "ipython" },
     { name = "notebook" },
-]
-ocr = [
-    { name = "onnxruntime" },
-    { name = "rapidocr" },
 ]
 openai = [
     { name = "openai" },
@@ -1275,8 +1271,7 @@ requires-dist = [
     { name = "more-itertools", specifier = ">=8.0.0" },
     { name = "notebook", marker = "extra == 'notebook'", specifier = ">=6.0.0" },
     { name = "numpy", marker = "extra == 'test'", specifier = ">=1.20.0" },
-    { name = "onnxruntime", marker = "extra == 'all'", specifier = ">=1.24.1" },
-    { name = "onnxruntime", marker = "extra == 'ocr'", specifier = ">=1.24.1" },
+    { name = "onnxruntime", specifier = ">=1.24.1" },
     { name = "openai", marker = "extra == 'all'", specifier = ">=1.50.0" },
     { name = "openai", marker = "extra == 'openai'", specifier = ">=1.50.0" },
     { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=3.5.0" },
@@ -1287,8 +1282,7 @@ requires-dist = [
     { name = "python-dotenv", specifier = ">=0.19.0" },
     { name = "pytype", marker = "extra == 'dev'", specifier = ">=2024.10.11" },
     { name = "pyyaml", specifier = ">=6.0" },
-    { name = "rapidocr", marker = "extra == 'all'", specifier = ">=3.6.0" },
-    { name = "rapidocr", marker = "extra == 'ocr'", specifier = ">=3.6.0" },
+    { name = "rapidocr", specifier = ">=3.6.0" },
     { name = "regex", specifier = ">=2023.0.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = "==0.15.1" },
     { name = "tomli", marker = "extra == 'test'", specifier = ">=2.0.0" },
@@ -1296,7 +1290,7 @@ requires-dist = [
     { name = "tqdm", specifier = ">=4.64.0" },
     { name = "types-regex", marker = "extra == 'dev'", specifier = ">=2023.0.0" },
 ]
-provides-extras = ["openai", "ocr", "all", "dev", "test", "notebook"]
+provides-extras = ["openai", "all", "dev", "test", "notebook"]
 
 [package.metadata.requires-dev]
 dev = [

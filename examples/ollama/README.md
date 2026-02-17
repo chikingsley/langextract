@@ -43,7 +43,7 @@ result = lx.extract(
     examples=examples,
     model_id="llama3.1:70b",  # Larger model may need more time
     timeout=300,  # 5 minutes
-    model_url="http://localhost:11434",
+    base_url="http://localhost:11434",
 )
 ```
 
@@ -53,7 +53,7 @@ Or using ModelConfig:
 config = lx.factory.ModelConfig(
     model_id="llama3.1:70b",
     provider_kwargs={
-        "model_url": "http://localhost:11434",
+        "base_url": "http://localhost:11434",
         "timeout": 300,  # 5 minutes
     }
 )

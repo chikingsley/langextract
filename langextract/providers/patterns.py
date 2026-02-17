@@ -19,46 +19,50 @@ in one place to avoid duplication.
 """
 
 # Gemini provider patterns
-GEMINI_PATTERNS = (r'^gemini',)
+GEMINI_PATTERNS = (r"^gemini",)
 GEMINI_PRIORITY = 10
 
 # OpenAI provider patterns
 OPENAI_PATTERNS = (
-    r'^gpt-4',
-    r'^gpt4\.',
-    r'^gpt-5',
-    r'^gpt5\.',
+    r"^gpt-4",
+    r"^gpt4\.",
+    r"^gpt-5",
+    r"^gpt5\.",
 )
 OPENAI_PRIORITY = 10
 
 # Ollama provider patterns
 OLLAMA_PATTERNS = (
     # Standard Ollama naming patterns
-    r'^gemma',  # gemma2:2b, gemma2:9b, etc.
-    r'^llama',  # llama3.2:1b, llama3.1:8b, etc.
-    r'^mistral',  # mistral:7b, mistral-nemo:12b, etc.
-    r'^mixtral',  # mixtral:8x7b, mixtral:8x22b, etc.
-    r'^phi',  # phi3:3.8b, phi3:14b, etc.
-    r'^qwen',  # qwen2.5:0.5b to 72b
-    r'^deepseek',  # deepseek-coder-v2, etc.
-    r'^command-r',  # command-r:35b, command-r-plus:104b
-    r'^starcoder',  # starcoder2:3b, starcoder2:7b, etc.
-    r'^codellama',  # codellama:7b, codellama:13b, etc.
-    r'^codegemma',  # codegemma:2b, codegemma:7b
-    r'^tinyllama',  # tinyllama:1.1b
-    r'^wizardcoder',  # wizardcoder:7b, wizardcoder:13b, etc.
-    r'^gpt-oss',  # Open source GPT variants
+    r"^gemma",  # gemma2:2b, gemma2:9b, etc.
+    r"^llama",  # llama3.2:1b, llama3.1:8b, etc.
+    r"^mistral",  # mistral:7b, mistral-nemo:12b, etc.
+    r"^mixtral",  # mixtral:8x7b, mixtral:8x22b, etc.
+    r"^phi",  # phi3:3.8b, phi3:14b, etc.
+    r"^qwen",  # qwen2.5:0.5b to 72b
+    r"^deepseek",  # deepseek-coder-v2, etc.
+    r"^command-r",  # command-r:35b, command-r-plus:104b
+    r"^starcoder",  # starcoder2:3b, starcoder2:7b, etc.
+    r"^codellama",  # codellama:7b, codellama:13b, etc.
+    r"^codegemma",  # codegemma:2b, codegemma:7b
+    r"^tinyllama",  # tinyllama:1.1b
+    r"^wizardcoder",  # wizardcoder:7b, wizardcoder:13b, etc.
+    r"^gpt-oss",  # Open source GPT variants
+    r"^lfm",  # lfm2.5-thinking, lfm2:1.2b, etc.
+    r"^granite",  # granite4:latest, granite3.*, etc.
     # HuggingFace model patterns
-    r'^meta-llama/[Ll]lama',
-    r'^google/gemma',
-    r'^mistralai/[Mm]istral',
-    r'^mistralai/[Mm]ixtral',
-    r'^microsoft/phi',
-    r'^Qwen/',
-    r'^deepseek-ai/',
-    r'^bigcode/starcoder',
-    r'^codellama/',
-    r'^TinyLlama/',
-    r'^WizardLM/',
+    r"^meta-llama/[Ll]lama",
+    r"^google/gemma",
+    r"^ibm/granite",
+    r"^LiquidAI/LFM",
+    r"^mistralai/[Mm]istral",
+    r"^mistralai/[Mm]ixtral",
+    r"^microsoft/phi",
+    r"^Qwen/",
+    r"^deepseek-ai/",
+    r"^bigcode/starcoder",
+    r"^codellama/",
+    r"^TinyLlama/",
+    r"^WizardLM/",
 )
 OLLAMA_PRIORITY = 10

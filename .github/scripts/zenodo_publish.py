@@ -62,7 +62,9 @@ def new_version_from_record(record_id: str):
   return requests.get(latest_draft_url, headers=HEADERS, timeout=30).json()
 
 
-def upload_file(bucket_url: str, path: str, dest_name: str = None):
+def upload_file(
+    bucket_url: str, path: str, dest_name: str | None = None
+):
   """Upload a file to the deposition bucket."""
   dest = dest_name or os.path.basename(path)
   with open(path, "rb") as fp:

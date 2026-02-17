@@ -44,7 +44,6 @@ jobs:
               file.filename === 'pyproject.toml' ||
               file.filename === 'tox.ini' ||
               file.filename === '.pre-commit-config.yaml' ||
-              file.filename === '.pylintrc' ||
               file.filename === 'Dockerfile' ||
               file.filename === 'autoformat.sh' ||
               file.filename === '.gitignore' ||

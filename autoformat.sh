@@ -19,8 +19,8 @@
 #        If no target is specified, formats the current directory
 #
 # This script runs:
-# 1. isort for import sorting
-# 2. pyink (Google's Black fork) for code formatting
+# 1. ruff format for code formatting
+# 2. ruff check --fix for lint + import sorting autofixes
 # 3. pre-commit hooks for additional formatting (trailing whitespace, end-of-file, etc.)
 
 set -e
@@ -37,15 +37,14 @@ check_tool() {
     fi
 }
 
-check_tool "isort"
-check_tool "pyink"
+check_tool "ruff"
 check_tool "pre-commit"
 
 # Parse command line arguments
 show_usage() {
     echo "Usage: $0 [target_directory ...]"
     echo
-    echo "Formats Python code using isort and pyink according to Google style."
+    echo "Formats Python code using Ruff."
     echo
     echo "Arguments:"
     echo "  target_directory    One or more directories to format (default: langextract tests)"
@@ -71,37 +70,23 @@ else
     echo "Formatting targets: $TARGETS"
 fi
 
-# Find pyproject.toml relative to script location
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-CONFIG_FILE="${SCRIPT_DIR}/pyproject.toml"
-
-if [ ! -f "$CONFIG_FILE" ]; then
-    echo "Warning: pyproject.toml not found at ${CONFIG_FILE}"
-    echo "Using default configuration."
-    CONFIG_ARG=""
+# Run Ruff formatter
+echo "Running ruff format..."
+if ruff format $TARGETS; then
+    echo "Formatting complete"
 else
-    CONFIG_ARG="--config $CONFIG_FILE"
-fi
-
-echo
-
-# Run isort
-echo "Running isort to organize imports..."
-if isort $TARGETS; then
-    echo "Import sorting complete"
-else
-    echo "Import sorting failed"
+    echo "Formatting failed"
     exit 1
 fi
 
 echo
 
-# Run pyink
-echo "Running pyink to format code (Google style, 80 chars)..."
-if pyink $TARGETS $CONFIG_ARG; then
-    echo "Code formatting complete"
+# Run Ruff lint autofix
+echo "Running ruff check --fix..."
+if ruff check --fix $TARGETS; then
+    echo "Lint autofixes complete"
 else
-    echo "Code formatting failed"
+    echo "Lint autofixes failed"
     exit 1
 fi
 
@@ -121,5 +106,5 @@ echo
 echo "All formatting complete!"
 echo
 echo "Next steps:"
-echo "  - Run: pylint --rcfile=${SCRIPT_DIR}/.pylintrc $TARGETS"
+echo "  - Run: ruff check $TARGETS"
 echo "  - Commit your changes"

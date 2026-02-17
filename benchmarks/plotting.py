@@ -25,8 +25,6 @@ from typing import Any
 
 import matplotlib
 import matplotlib.pyplot as plt
-import numpy as np
-
 from benchmarks import config
 
 matplotlib.use("Agg")
@@ -67,7 +65,7 @@ def create_diverse_plots(results: dict[str, Any], filepath: Path) -> bool:
     _plot_summary_table(ax5, results)
     ax6.axis("off")
 
-    plt.tight_layout(rect=[0, 0.02, 1, 0.96])
+    plt.tight_layout(rect=(0, 0.02, 1, 0.96))
 
     plot_path = filepath.with_suffix(".png")
     plt.savefig(plot_path, dpi=100, bbox_inches="tight")
@@ -145,7 +143,7 @@ def _plot_tokenization_rate(ax, results):
     ax.set_title("Tokenization Rate")
     return
 
-  x = np.arange(len(text_types))
+  x = list(range(len(text_types)))
   bars = ax.bar(x, tok_per_char, color="#2196f3", alpha=0.7)
 
   for bar_rect, val in zip(bars, tok_per_char):
@@ -196,7 +194,7 @@ def _plot_extraction_density(ax, results):
     ax.set_title("Extraction Density")
     return
 
-  x = np.arange(len(text_types))
+  x = list(range(len(text_types)))
   bars = ax.bar(x, densities, color="#4caf50", alpha=0.7)
 
   for bar_rect, val in zip(bars, densities):
@@ -246,7 +244,7 @@ def _plot_processing_speed(ax, results):
     ax.set_title("Processing Speed")
     return
 
-  x = np.arange(len(text_types))
+  x = list(range(len(text_types)))
   bars = ax.bar(x, speeds, color="#ff9800", alpha=0.7)
 
   for bar_rect, val in zip(bars, speeds):
@@ -366,7 +364,7 @@ def create_comparison_plots(json_files: list[Path], output_path: Path) -> None:
       fontsize=14,
       fontweight="bold",
   )
-  plt.tight_layout(rect=[0, 0.01, 1, 0.95])
+  plt.tight_layout(rect=(0, 0.01, 1, 0.95))
   plt.subplots_adjust(hspace=0.45, wspace=0.35, top=0.93)
   plt.savefig(output_path, dpi=100, bbox_inches="tight")
   plt.close()
@@ -392,12 +390,12 @@ def _plot_entity_comparison(ax, all_results):
 
     language_data.append(run_counts)
 
-  x = np.arange(len(runs))
+  x = list(range(len(runs)))
   width = 0.2
 
   for i, lang in enumerate(languages):
     counts = [data[lang] for data in language_data]
-    bars = ax.bar(x + i * width, counts, width, label=lang.capitalize())
+    bars = ax.bar([v + i * width for v in x], counts, width, label=lang.capitalize())
 
     for bar_rect, count in zip(bars, counts):
       if count > 0:
@@ -425,7 +423,7 @@ def _plot_entity_comparison(ax, all_results):
       color="#666666",
       va="bottom",
   )
-  ax.set_xticks(x + width * 1.5)
+  ax.set_xticks([v + width * 1.5 for v in x])
   ax.set_xticklabels(runs, rotation=45, ha="right")
   ax.legend(loc="upper left", fontsize=8)
   ax.grid(True, alpha=0.3)
@@ -452,7 +450,7 @@ def _plot_time_comparison(ax, all_results):
     else:
       avg_times.append(0)
 
-  x_pos = np.arange(len(runs))
+  x_pos = range(len(runs))
   bars = ax.bar(x_pos, avg_times, color="skyblue", edgecolor="navy", alpha=0.7)
 
   ax.set_xlabel("Run")
@@ -564,7 +562,7 @@ def _plot_success_rate_comparison(ax, all_results):
     else:
       success_rates.append(0)
 
-  x_pos = np.arange(len(runs))
+  x_pos = range(len(runs))
   colors = [
       "green" if rate == 100 else "orange" if rate >= 75 else "red"
       for rate in success_rates
@@ -669,7 +667,7 @@ def _plot_timeline(ax, all_results):
     else:
       entity_totals.append(0)
 
-  x_pos = np.arange(len(timestamps))
+  x_pos = range(len(timestamps))
   ax.plot(x_pos, entity_totals, "o-", color="blue", linewidth=2, markersize=8)
   ax.set_xlabel("Run")
   ax.set_ylabel("Total Entities")

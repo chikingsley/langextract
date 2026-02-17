@@ -4,7 +4,13 @@
   </a>
 </p>
 
-# LangExtract
+# Ling Extract Plus Plus
+
+## Fork Notice
+
+This repository is Simon's maintained port/fork of Google's LangExtract.
+It intentionally prioritizes internal product velocity with direct, breaking upgrades.
+Breaking changes are expected across major versions.
 
 [![PyPI version](https://img.shields.io/pypi/v/langextract.svg)](https://pypi.org/project/langextract/)
 [![GitHub stars](https://img.shields.io/github/stars/google/langextract.svg?style=social&label=Star)](https://github.com/google/langextract)
@@ -36,13 +42,13 @@ LangExtract is a Python library that uses LLMs to extract structured information
 
 ## Why LangExtract?
 
-1.  **Precise Source Grounding:** Maps every extraction to its exact location in the source text, enabling visual highlighting for easy traceability and verification.
-2.  **Reliable Structured Outputs:** Enforces a consistent output schema based on your few-shot examples, leveraging controlled generation in supported models like Gemini to guarantee robust, structured results.
-3.  **Optimized for Long Documents:** Overcomes the "needle-in-a-haystack" challenge of large document extraction by using an optimized strategy of text chunking, parallel processing, and multiple passes for higher recall.
-4.  **Interactive Visualization:** Instantly generates a self-contained, interactive HTML file to visualize and review thousands of extracted entities in their original context.
-5.  **Flexible LLM Support:** Supports your preferred models, from cloud-based LLMs like the Google Gemini family to local open-source models via the built-in Ollama interface.
-6.  **Adaptable to Any Domain:** Define extraction tasks for any domain using just a few examples. LangExtract adapts to your needs without requiring any model fine-tuning.
-7.  **Leverages LLM World Knowledge:** Utilize precise prompt wording and few-shot examples to influence how the extraction task may utilize LLM knowledge. The accuracy of any inferred information and its adherence to the task specification are contingent upon the selected LLM, the complexity of the task, the clarity of the prompt instructions, and the nature of the prompt examples.
+1. **Precise Source Grounding:** Maps every extraction to its exact location in the source text, enabling visual highlighting for easy traceability and verification.
+2. **Reliable Structured Outputs:** Enforces a consistent output schema based on your few-shot examples, leveraging controlled generation in supported models like Gemini to guarantee robust, structured results.
+3. **Optimized for Long Documents:** Overcomes the "needle-in-a-haystack" challenge of large document extraction by using an optimized strategy of text chunking, parallel processing, and multiple passes for higher recall.
+4. **Interactive Visualization:** Instantly generates a self-contained, interactive HTML file to visualize and review thousands of extracted entities in their original context.
+5. **Flexible LLM Support:** Supports your preferred models, from cloud-based LLMs like the Google Gemini family to local open-source models via the built-in Ollama interface.
+6. **Adaptable to Any Domain:** Define extraction tasks for any domain using just a few examples. LangExtract adapts to your needs without requiring any model fine-tuning.
+7. **Leverages LLM World Knowledge:** Utilize precise prompt wording and few-shot examples to influence how the extraction task may utilize LLM knowledge. The accuracy of any inferred information and its adherence to the task specification are contingent upon the selected LLM, the complexity of the task, the clarity of the prompt instructions, and the nature of the prompt examples.
 
 ## Quick Start
 
@@ -110,7 +116,7 @@ result = lx.extract(
 
 > **Model Selection**: `gemini-2.5-flash` is the recommended default, offering an excellent balance of speed, cost, and quality. For highly complex tasks requiring deeper reasoning, `gemini-2.5-pro` may provide superior results. For large-scale or production use, a Tier 2 Gemini quota is suggested to increase throughput and avoid rate limits. See the [rate-limit documentation](https://ai.google.dev/gemini-api/docs/rate-limits#tier-2) for details.
 >
-> **Model Lifecycle**: Note that Gemini models have a lifecycle with defined retirement dates. Users should consult the [official model version documentation](https://cloud.google.com/vertex-ai/generative-ai/docs/learn/model-versions) to stay informed about the latest stable and legacy versions.
+> **Model Lifecycle**: Note that Gemini models have a lifecycle with defined retirement dates. Users should consult the [official model version documentation](https://cloud.google.com/vertex-ai/generative-ai/docs/learn/model-versions) to stay informed about currently supported versions.
 
 ### 3. Visualize the Results
 
@@ -182,7 +188,6 @@ LangExtract uses modern Python packaging with `pyproject.toml` for dependency ma
 
 *Installing with `-e` puts the package in development mode, allowing you to modify the code without reinstalling.*
 
-
 ```bash
 git clone https://github.com/google/langextract.git
 cd langextract
@@ -201,7 +206,7 @@ pip install -e ".[test]"
 
 ```bash
 docker build -t langextract .
-docker run --rm -e LANGEXTRACT_API_KEY="your-api-key" langextract python your_script.py
+docker run --rm -e GEMINI_API_KEY="your-api-key" langextract python your_script.py
 ```
 
 ## API Key Setup for Cloud Models
@@ -215,16 +220,18 @@ extended to other third-party APIs by updating the inference endpoints.
 
 Get API keys from:
 
-*   [AI Studio](https://aistudio.google.com/app/apikey) for Gemini models
-*   [Vertex AI](https://cloud.google.com/vertex-ai/generative-ai/docs/sdks/overview) for enterprise use
-*   [OpenAI Platform](https://platform.openai.com/api-keys) for OpenAI models
+- [AI Studio](https://aistudio.google.com/app/apikey) for Gemini models
+- [Vertex AI](https://cloud.google.com/vertex-ai/generative-ai/docs/sdks/overview) for enterprise use
+- [OpenAI Platform](https://platform.openai.com/api-keys) for OpenAI models
 
 ### Setting up API key in your environment
 
 **Option 1: Environment Variable**
 
 ```bash
-export LANGEXTRACT_API_KEY="your-api-key-here"
+# Set the provider-specific key for the model you're using:
+export GEMINI_API_KEY="your-api-key-here"     # For Gemini models
+export OPENAI_API_KEY="your-api-key-here"     # For OpenAI models
 ```
 
 **Option 2: .env File (Recommended)**
@@ -232,16 +239,25 @@ export LANGEXTRACT_API_KEY="your-api-key-here"
 Add your API key to a `.env` file:
 
 ```bash
-# Add API key to .env file
+# Add API key to .env file (use the key for your provider)
 cat >> .env << 'EOF'
-LANGEXTRACT_API_KEY=your-api-key-here
+GEMINI_API_KEY=your-api-key-here
 EOF
 
 # Keep your API key secure
 echo '.env' >> .gitignore
 ```
 
+LangExtract reads `.env` automatically (via `pydantic-settings`). Each provider
+declares which env var it needs — just set the right one and it works.
+If your env file lives elsewhere, set:
+
+```bash
+export LANGEXTRACT_ENV_FILE="/absolute/path/to/.env"
+```
+
 In your Python code:
+
 ```python
 import langextract as lx
 
@@ -322,6 +338,7 @@ result = lx.extract(
 Note: OpenAI models require `fence_output=True` and `use_schema_constraints=False` because LangExtract doesn't implement schema constraints for OpenAI yet.
 
 ## Using Local LLMs with Ollama
+
 LangExtract supports local inference using Ollama, allowing you to run models without API keys:
 
 ```python
@@ -332,7 +349,7 @@ result = lx.extract(
     prompt_description=prompt,
     examples=examples,
     model_id="gemma2:2b",  # Automatically selects Ollama provider
-    model_url="http://localhost:11434",
+    base_url="http://localhost:11434",
     fence_output=False,
     use_schema_constraints=False
 )
@@ -379,8 +396,6 @@ with development, testing, and pull requests. You must sign a
 [Contributor License Agreement](https://cla.developers.google.com/about)
 before submitting patches.
 
-
-
 ## Testing
 
 To run tests locally from the source:
@@ -400,7 +415,7 @@ pytest tests
 Or reproduce the full CI matrix locally with tox:
 
 ```bash
-tox  # runs pylint + pytest on Python 3.10 and 3.11
+tox  # runs ruff + pytest across configured environments
 ```
 
 ### Ollama Integration Testing
@@ -425,13 +440,14 @@ This project uses automated formatting tools to maintain consistent code style:
 ./autoformat.sh
 
 # Or run formatters separately
-isort langextract tests --profile google --line-length 80
-pyink langextract tests --config pyproject.toml
+ruff format langextract tests
+ruff check --fix langextract tests
 ```
 
 ### Pre-commit Hooks
 
 For automatic formatting checks:
+
 ```bash
 pre-commit install  # One-time setup
 pre-commit run --all-files  # Manual run
@@ -442,7 +458,15 @@ pre-commit run --all-files  # Manual run
 Run linting before submitting PRs:
 
 ```bash
-pylint --rcfile=.pylintrc langextract tests
+ruff check langextract tests
+```
+
+### Type Checking
+
+Run `ty` with the project environment:
+
+```bash
+uv run ty check
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for full development guidelines.

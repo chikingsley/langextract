@@ -12,14 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Compatibility shim for langextract.tokenizer imports.
+"""Public tokenizer API."""
 
-This module provides backward compatibility for code that imports from
-langextract.tokenizer. All functionality has moved to langextract.core.tokenizer.
-"""
 
-from __future__ import annotations
-
-# Re-export everything from core.tokenizer for backward compatibility
-# pylint: disable=unused-wildcard-import
-from langextract.core.tokenizer import *
+from langextract.core.tokenizer import *  # noqa: F403

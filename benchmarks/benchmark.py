@@ -51,16 +51,14 @@ from benchmarks import config
 from benchmarks import plotting
 from benchmarks import utils
 import langextract
-from langextract import core
 from langextract import data
 from langextract import visualize
+from langextract.core import tokenizer as tokenizer_lib
 import langextract.io as lio
 
 # Load API key from environment
 dotenv.load_dotenv(override=True)
-GEMINI_API_KEY = os.environ.get(
-    "GEMINI_API_KEY", os.environ.get("LANGEXTRACT_API_KEY")
-)
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
 
 class BenchmarkRunner:
@@ -70,15 +68,15 @@ class BenchmarkRunner:
     """Initialize runner with timestamp and git metadata."""
     self.timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     self.git_info = utils.get_git_info()
-    self.tokenizer = core.tokenizer.RegexTokenizer()
+    self.tokenizer = tokenizer_lib.RegexTokenizer()
 
   def set_tokenizer(self, tokenizer_type: str):
     """Set the tokenizer to use."""
     if tokenizer_type.lower() == "unicode":
-      self.tokenizer = core.tokenizer.UnicodeTokenizer()
+      self.tokenizer = tokenizer_lib.UnicodeTokenizer()
       print("Using UnicodeTokenizer")
     else:
-      self.tokenizer = core.tokenizer.RegexTokenizer()
+      self.tokenizer = tokenizer_lib.RegexTokenizer()
       print("Using RegexTokenizer (default)")
 
   def print_header(self):
@@ -329,11 +327,13 @@ class BenchmarkRunner:
           viz_name = f"{model_name}_{text_type}"
 
           jsonl_path = viz_dir / f"{viz_name}.jsonl"
-          lio.save_annotated_documents(
-              [result[config.EXTRACTION_RESULT_KEY]],
-              output_name=jsonl_path.name,
-              output_dir=str(viz_dir),
-          )
+          extraction_result = result[config.EXTRACTION_RESULT_KEY]
+          if isinstance(extraction_result, data.AnnotatedDocument):
+            lio.save_annotated_documents(
+                iter([extraction_result]),
+                output_name=jsonl_path.name,
+                output_dir=str(viz_dir),
+            )
 
           html_content = visualize(str(jsonl_path))
           html_path = viz_dir / f"{viz_name}.html"
@@ -425,7 +425,7 @@ def main():
   model_to_test = args.model or config.MODELS.default_model
   if "gemini" in model_to_test.lower() and not GEMINI_API_KEY:
     print(
-        f"Error: {model_to_test} requires GEMINI_API_KEY or LANGEXTRACT_API_KEY"
+        f"Error: {model_to_test} requires GEMINI_API_KEY"
     )
     return
 

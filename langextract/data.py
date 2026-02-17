@@ -12,14 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Compatibility shim for langextract.data imports.
+"""Public data model API."""
 
-This module provides backward compatibility for code that imports from
-langextract.data. All functionality has moved to langextract.core.data.
-"""
 
-from __future__ import annotations
-
-# Re-export everything from core.data for backward compatibility
-# pylint: disable=unused-wildcard-import
-from langextract.core.data import *
+from langextract.core.data import *  # noqa: F403

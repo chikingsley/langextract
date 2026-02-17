@@ -17,19 +17,14 @@
 # Run manually: pre-commit run --all-files
 
 repos:
-  - repo: https://github.com/PyCQA/isort
-    rev: 6.0.0
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.1
     hooks:
-      - id: isort
-        name: isort (import sorting)
-        # Configuration is in pyproject.toml
-
-  - repo: https://github.com/google/pyink
-    rev: 24.3.0
-    hooks:
-      - id: pyink
-        name: pyink (Google's Black fork)
-        args: ["--config", "pyproject.toml"]
+      - id: ruff-check
+        name: ruff check
+        args: ["--fix"]
+      - id: ruff-format
+        name: ruff format
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.5.0

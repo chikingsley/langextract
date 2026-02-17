@@ -114,7 +114,7 @@ def get_optimal_text_size(text: str, model_id: str) -> str:
   return text[:max_chars]
 
 
-def get_extraction_example(text_type: config.TextTypes) -> dict[str, str]:  # pylint: disable=unused-argument
+def get_extraction_example(text_type: config.TextTypes) -> dict[str, str]:
   """Get extraction example configuration.
 
   Args:

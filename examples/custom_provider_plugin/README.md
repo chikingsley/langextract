@@ -28,7 +28,7 @@ custom_provider_plugin/
 ### Provider Implementation (`provider.py`)
 
 ```python
-@lx.providers.registry.register(
+@lx.providers.router.register(
     r'^gemini',  # Pattern for model IDs this provider handles
 )
 class CustomGeminiProvider(lx.inference.BaseLanguageModel):
@@ -142,6 +142,7 @@ result = lx.extract(
 ## Creating Your Own Provider - Step by Step
 
 ### 1. Copy and Rename
+
 ```bash
 # Copy this example directory
 cp -r examples/custom_provider_plugin/ ~/langextract-myprovider/
@@ -152,12 +153,14 @@ mv langextract_provider_example langextract_myprovider
 ```
 
 ### 2. Update Package Configuration
+
 Edit `pyproject.toml`:
 - Change `name = "langextract-myprovider"`
 - Update description and author information
 - Change entry point: `myprovider = "langextract_myprovider:MyProvider"`
 
 ### 3. Modify Provider Implementation
+
 Edit `provider.py`:
 - Change class name from `CustomGeminiProvider` to `MyProvider`
 - Update `@register()` patterns to match your model IDs
@@ -165,6 +168,7 @@ Edit `provider.py`:
 - Add any provider-specific parameters
 
 ### 4. Add Schema Support (Optional)
+
 Edit `schema.py`:
 - Rename to `MyProviderSchema`
 - Customize `from_examples()` for your extraction format
@@ -172,6 +176,7 @@ Edit `schema.py`:
 - Set `supports_strict_mode` based on your capabilities
 
 ### 5. Install and Test
+
 ```bash
 # Install in development mode
 pip install -e .
@@ -180,16 +185,18 @@ pip install -e .
 python -c "
 import langextract as lx
 lx.providers.load_plugins_once()
-print('Provider registered:', any('myprovider' in str(e) for e in lx.providers.registry.list_entries()))
+print('Provider registered:', any('myprovider' in str(e) for e in lx.providers.router.list_entries()))
 "
 ```
 
 ### 6. Write Tests
+
 - Test that your provider loads and handles basic inference
 - Verify schema support works (if implemented)
 - Test error handling for your specific API
 
 ### 7. Publish to PyPI and Share with Community
+
 ```bash
 # Build package
 python -m build

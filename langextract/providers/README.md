@@ -3,6 +3,7 @@
 This directory contains the provider system for LangExtract, which enables support for different Large Language Model (LLM) backends.
 
 **Quick Start**: Use the [provider plugin generator script](../../scripts/create_provider_plugin.py) to create a new provider in minutes:
+
 ```bash
 python scripts/create_provider_plugin.py MyProvider --with-schema
 ```
@@ -17,7 +18,7 @@ The provider system uses a **registry pattern** with **automatic discovery**:
 
 ### Provider Resolution Flow
 
-```
+```text
 User Code                    LangExtract                      Provider
 ─────────                    ───────────                      ────────
     |                             |                              |
@@ -72,25 +73,32 @@ model = lx.factory.create_model(config)
 ```
 
 Provider names can be:
+
 - Full class name: `"GeminiLanguageModel"`, `"OpenAILanguageModel"`, `"OllamaLanguageModel"`
 - Partial match: `"gemini"`, `"openai"`, `"ollama"` (case-insensitive)
 
 ## Provider Types
 
 ### 1. Core Providers (Always Available)
+
 Ships with langextract, dependencies included:
+
 - **Gemini** (`gemini.py`): Google's Gemini models
 - **Ollama** (`ollama.py`): Local models via Ollama
 
 ### 2. Built-in Provider with Optional Dependencies
+
 Ships with langextract, but requires extra installation:
+
 - **OpenAI** (`openai.py`): OpenAI's GPT models
   - Code included in package
   - Requires: `pip install langextract[openai]` to install OpenAI SDK
   - Future: May be moved to external plugin package
 
 ### 3. External Plugins (Third-party)
+
 Separate packages that extend LangExtract with new providers:
+
 - **Installed separately**: `pip install langextract-yourprovider`
 - **Auto-discovered**: Uses Python entry points for automatic registration
 - **Zero configuration**: Import langextract and the provider is available
@@ -110,10 +118,10 @@ result = lx.extract(
 
 #### How Plugin Discovery Works
 
-```
+```text
 1. pip install langextract-yourprovider
    └── Installs package containing:
-       • Provider class with @lx.providers.registry.register decorator
+       • Provider class with @lx.providers.router.register decorator
        • Python entry point pointing to this class
 
 2. import langextract
@@ -122,12 +130,13 @@ result = lx.extract(
 
 3. lx.extract(model_id="yourmodel-latest")
    └── Triggers plugin discovery via entry points
-       └── @lx.providers.registry.register decorator fires
+       └── @lx.providers.router.register decorator fires
            └── Provider patterns added to registry
                └── Registry matches pattern and uses your provider
 ```
 
 **Important Notes:**
+
 - Plugin loading is **lazy** - plugins are discovered when first needed
 - To manually trigger plugin loading: `lx.providers.load_plugins_once()`
 - Set `LANGEXTRACT_DISABLE_PLUGINS=1` to disable plugin loading
@@ -149,7 +158,7 @@ When you call `lx.extract(model_id="gemini-2.5-flash", ...)`, here's what happen
 import langextract as lx
 
 # Gemini provider registration:
-@lx.providers.registry.register(
+@lx.providers.router.register(
     r'^GeminiLanguageModel$',  # Explicit: model_id="GeminiLanguageModel"
     r'^gemini',                # Prefix: model_id="gemini-2.5-flash"
     r'^palm'                   # Legacy: model_id="palm-2"
@@ -167,6 +176,7 @@ class GeminiLanguageModel(lx.inference.BaseLanguageModel):
 ## Usage Examples
 
 ### Using Default Provider Selection
+
 ```python
 import langextract as lx
 
@@ -205,6 +215,7 @@ result = lx.extract(
 ```
 
 ### Using the Factory for Advanced Control
+
 ```python
 # When you need explicit provider selection or advanced configuration
 from langextract import factory
@@ -214,13 +225,14 @@ config = factory.ModelConfig(
     model_id="gemma2:2b",
     provider="OllamaLanguageModel",  # Explicitly use Ollama
     provider_kwargs={
-        "model_url": "http://localhost:11434"
+        "base_url": "http://localhost:11434"
     }
 )
 model = factory.create_model(config)
 ```
 
 ### Direct Provider Usage
+
 ```python
 import langextract as lx
 
@@ -243,7 +255,8 @@ outputs = model.infer(["prompt1", "prompt2"])
 Creating a provider plugin? Follow this checklist:
 
 #### ☐ **1. Setup Package Structure**
-```
+
+```text
 langextract-yourprovider/
 ├── pyproject.toml              # Package config with entry point
 ├── README.md                    # Documentation
@@ -255,6 +268,7 @@ langextract-yourprovider/
 ```
 
 #### ☐ **2. Configure Entry Point** (`pyproject.toml`)
+
 ```toml
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
@@ -270,14 +284,16 @@ yourprovider = "langextract_yourprovider:YourProviderLanguageModel"
 ```
 
 #### ☐ **3. Implement Provider** (`provider.py`)
+
 - [ ] Import required modules
-- [ ] Add `@lx.providers.registry.register()` decorator with patterns
+- [ ] Add `@lx.providers.router.register()` decorator with patterns
 - [ ] Inherit from `lx.inference.BaseLanguageModel`
 - [ ] Implement `__init__()` method
 - [ ] Implement `infer()` method returning `ScoredOutput` objects
 - [ ] Export class from `__init__.py`
 
 #### ☐ **4. (Optional) Add Schema Support** (`schema.py`)
+
 - [ ] Create schema class inheriting from `lx.schema.BaseSchema`
 - [ ] Implement `from_examples()` class method
 - [ ] Implement `to_provider_config()` method
@@ -285,17 +301,20 @@ yourprovider = "langextract_yourprovider:YourProviderLanguageModel"
 - [ ] Handle schema in provider's `__init__()` and `infer()`
 
 #### ☐ **5. Testing**
+
 - [ ] Install plugin with `pip install -e .`
 - [ ] Test that your provider loads and handles basic inference
 - [ ] Verify schema support works (if implemented)
 
 #### ☐ **6. Documentation**
+
 - [ ] Document supported model IDs and patterns
 - [ ] List required environment variables
 - [ ] Provide usage examples
 - [ ] Document any provider-specific parameters
 
 #### ☐ **7. Distribution & Community**
+
 - [ ] Test installation with `pip install -e .`
 - [ ] Build package with `python -m build`
 - [ ] Test in clean environment
@@ -308,7 +327,9 @@ yourprovider = "langextract_yourprovider:YourProviderLanguageModel"
 External plugins are the recommended approach for adding new providers. They're easy to maintain, distribute, and don't require changes to the core package.
 
 #### For Users (Installing an External Plugin)
+
 Simply install the plugin package:
+
 ```bash
 pip install langextract-yourprovider
 # That's it! The provider is now available in langextract
@@ -317,7 +338,8 @@ pip install langextract-yourprovider
 #### For Developers (Creating an External Plugin)
 
 1. Create a new package:
-```
+
+```text
 langextract-myprovider/
 ├── pyproject.toml
 ├── README.md
@@ -325,7 +347,8 @@ langextract-myprovider/
     └── __init__.py
 ```
 
-2. Configure entry point in `pyproject.toml`:
+1. Configure entry point in `pyproject.toml`:
+
 ```toml
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
@@ -344,13 +367,14 @@ myprovider = "langextract_myprovider:MyProviderLanguageModel"
 # myprovider = "langextract_myprovider"
 ```
 
-3. Implement your provider:
+1. Implement your provider:
+
 ```python
 # langextract_myprovider/__init__.py
 import os
 import langextract as lx
 
-@lx.providers.registry.register(r'^mymodel', r'^custom', priority=10)
+@lx.providers.router.register(r'^mymodel', r'^custom', priority=10)
 class MyProviderLanguageModel(lx.inference.BaseLanguageModel):
     def __init__(self, model_id: str, api_key: str = None, **kwargs):
         super().__init__()
@@ -367,15 +391,18 @@ class MyProviderLanguageModel(lx.inference.BaseLanguageModel):
 ```
 
 **Pattern Registration Explained:**
+
 - The `@register` decorator patterns (e.g., `r'^mymodel'`, `r'^custom'`) define which model IDs your provider supports
 - When users call `lx.extract(model_id="mymodel-3b")`, the registry matches against these patterns
 - Your provider will handle any model_id starting with "mymodel" or "custom"
 - Users can explicitly select your provider using its class name:
+
   ```python
   config = lx.factory.ModelConfig(provider="MyProviderLanguageModel")
   # Or partial match: provider="myprovider" (matches class name)
 
-4. Publish your package to PyPI:
+1. Publish your package to PyPI:
+
 ```bash
 pip install build twine
 python -m build
@@ -484,6 +511,7 @@ class MyProviderLanguageModel(lx.inference.BaseLanguageModel):
 #### 3. Schema Usage
 
 When users set `use_schema_constraints=True`, LangExtract will:
+
 1. Call your provider's `get_schema_class()`
 2. Use `from_examples()` to build a schema from provided examples
 3. Call `to_provider_config()` to get provider-specific kwargs
@@ -493,6 +521,7 @@ When users set `use_schema_constraints=True`, LangExtract will:
 ### Option 2: Built-in Provider (Requires Core Team Approval)
 
 **⚠️ Note**: Adding a provider to the core package requires:
+
 - Significant community demand and support
 - Commitment to long-term maintenance
 - Approval from the LangExtract maintainers
@@ -501,22 +530,24 @@ When users set `use_schema_constraints=True`, LangExtract will:
 This approach should only be used for providers that benefit a large portion of the user base.
 
 1. Create your provider file:
+
 ```python
 # langextract/providers/myprovider.py
 import langextract as lx
 
-@lx.providers.registry.register(r'^mymodel', r'^custom')
+@lx.providers.router.register(r'^mymodel', r'^custom')
 class MyProviderLanguageModel(lx.inference.BaseLanguageModel):
     # Implementation same as above
 ```
 
-2. Import it in `providers/__init__.py`:
+1. Import it in `providers/__init__.py`:
+
 ```python
 # In langextract/providers/__init__.py
 from langextract.providers import myprovider  # noqa: F401
 ```
 
-3. Submit a pull request with:
+1. Submit a pull request with:
    - Provider implementation
    - Comprehensive tests
    - Documentation
@@ -524,13 +555,17 @@ from langextract.providers import myprovider  # noqa: F401
 
 ## Environment Variables
 
-The factory automatically resolves API keys from environment:
+Each provider declares which env var(s) it needs via `ENV_API_KEY_NAMES`.
+The factory reads these from the provider class — no model-id string matching:
 
-| Provider | Environment Variables (in priority order) |
-|----------|------------------------------------------|
-| Gemini   | `GEMINI_API_KEY`, `LANGEXTRACT_API_KEY` |
-| OpenAI   | `OPENAI_API_KEY`, `LANGEXTRACT_API_KEY` |
-| Ollama   | `OLLAMA_BASE_URL` (default: http://localhost:11434) |
+| Provider | Environment Variables |
+|----------|----------------------|
+| Gemini   | `GEMINI_API_KEY` |
+| OpenAI   | `OPENAI_API_KEY` |
+| Ollama   | `OLLAMA_BASE_URL` (default: <http://localhost:11434>) |
+
+Environment values are loaded through `pydantic-settings`, which reads `.env`
+by default. To use a non-default env file path, set `LANGEXTRACT_ENV_FILE`.
 
 ## Design Principles
 
@@ -543,42 +578,55 @@ The factory automatically resolves API keys from environment:
 ## Common Issues
 
 ### Provider Not Found
+
 ```python
 ValueError: No provider registered for model_id='unknown-model'
 ```
+
 **Solution**: Check available patterns with `registry.list_entries()`
 
 ### Plugin Not Loading
+
 ```python
 # Your plugin isn't being discovered
 ```
+
 **Solutions**:
+
 1. Manually trigger loading: `lx.providers.load_plugins_once()`
 2. Check entry points are installed: `pip show -f your-package`
 3. Verify no typos in `pyproject.toml` entry point
 4. Ensure package is installed: `pip list | grep your-package`
 
 ### Missing Dependencies
+
 ```python
 InferenceConfigError: OpenAI provider requires openai package
 ```
+
 **Solution**: Install optional dependencies: `pip install langextract[openai]`
 
 ### Schema Not Working
+
 ```python
 # Schema constraints not being applied
 ```
+
 **Solutions**:
+
 1. Ensure provider implements `get_schema_class()`
 2. Check `use_schema_constraints=True` is set
 3. Verify schema's `supports_strict_mode` returns `True`
 4. Test schema creation with `Schema.from_examples(examples)`
 
 ### Pattern Conflicts
+
 ```python
 # Multiple providers match the same model_id
 ```
+
 **Solution**: Use explicit provider selection:
+
 ```python
 config = lx.factory.ModelConfig(
     model_id="model-name",

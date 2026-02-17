@@ -48,7 +48,7 @@ result = lx.extract(
     prompt_description=prompt_description,
     examples=examples,
     model_id="gemini-2.5-pro",
-    api_key="your-api-key-here"  # Optional if LANGEXTRACT_API_KEY environment variable is set
+    api_key="your-api-key-here"  # Optional if GEMINI_API_KEY is set in env or .env
 )
 
 # Display entities with positions
@@ -79,7 +79,7 @@ print("Interactive visualization saved to medical_ner_visualization.html")
 
 This will produce an output similar to:
 
-```
+```yaml
 Input: Patient took 400 mg PO Ibuprofen q4h for two days.
 
 Extracted entities:
@@ -168,7 +168,7 @@ result = lx.extract(
     prompt_description=prompt_description,
     examples=examples,
     model_id="gemini-2.5-pro",
-    api_key="your-api-key-here"  # Optional if LANGEXTRACT_API_KEY environment variable is set
+    api_key="your-api-key-here"  # Optional if GEMINI_API_KEY is set in env or .env
 )
 
 # Display grouped medications
@@ -217,7 +217,7 @@ print("Interactive visualization saved to medical_relationship_visualization.htm
 
 This will produce output similar to:
 
-```
+```text
 Input text: The patient was prescribed Lisinopril and Metformin last month.
 He takes the Lisinopril 10mg daily for hypertension, but often misses
 his Metformin 500mg dose which should be taken twice daily for diabetes.

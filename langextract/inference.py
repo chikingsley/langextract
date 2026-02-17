@@ -12,21 +12,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Language model inference compatibility layer.
-
-This module provides backward compatibility for the inference module.
-New code should import from langextract.core.base_model instead.
-"""
-
-from __future__ import annotations
-
-from langextract._compat import inference
+"""Public inference API."""
 
 
-def __getattr__(name: str):
-  """Forward to _compat.inference for backward compatibility."""
-  # Handle InferenceType specially since it's defined in _compat
-  if name == "InferenceType":
-    return inference.InferenceType
+import enum
 
-  return inference.__getattr__(name)
+from langextract.core.base_model import BaseLanguageModel
+from langextract.core.exceptions import InferenceOutputError
+from langextract.core.types import ScoredOutput
+from langextract.providers.gemini import GeminiLanguageModel
+from langextract.providers.ollama import OllamaLanguageModel
+from langextract.providers.openai import OpenAILanguageModel
+
+
+class InferenceType(enum.Enum):
+    ITERATIVE = "iterative"
+    MULTIPROCESS = "multiprocess"
+
+
+__all__ = [
+    "BaseLanguageModel",
+    "GeminiLanguageModel",
+    "InferenceOutputError",
+    "InferenceType",
+    "OllamaLanguageModel",
+    "OpenAILanguageModel",
+    "ScoredOutput",
+]

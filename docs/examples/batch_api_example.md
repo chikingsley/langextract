@@ -124,14 +124,17 @@ First 5 extractions:
 ## Key Features
 
 ### 1. Automatic Routing
+
 `langextract` automatically switches between real-time and batch APIs based on your `threshold`.
 - **< Threshold**: Uses real-time API for immediate results.
 - **>= Threshold**: Uses Batch API for cost savings.
 
 ### 2. Fault Tolerance & Caching
+
 Built-in GCS caching (`enable_caching=True`) allows you to resume interrupted jobs without re-processing completed items, saving time and cost.
 
 ### 3. Automated Storage
+
 `langextract` handles all GCS operations automatically using a dedicated bucket (`gs://langextract-{project}-{location}-batch`). Note that input/output files are retained for debugging.
 
 ## Tracking Job Status

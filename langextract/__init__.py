@@ -12,52 +12,49 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""LangExtract: Extract structured information from text with LLMs.
+"""Ling Extract Plus Plus: extract structured information from text with LLMs.
 
 This package provides the main extract and visualize functions,
 with lazy loading for other submodules accessed via attribute access.
 """
 
-from __future__ import annotations
 
 import importlib
 import sys
-from typing import Any, Dict
+from typing import Any
 
 from langextract import visualization
 from langextract.extraction import extract as extract_func
 
 __all__ = [
-    # Public convenience functions (thin wrappers)
-    "extract",
-    "visualize",
-    # Submodules exposed lazily on attribute access for ergonomics:
     "annotation",
-    "data",
-    "providers",
-    "schema",
-    "inference",
-    "factory",
-    "resolver",
-    "prompting",
-    "io",
-    "visualization",
-    "exceptions",
     "core",
+    "data",
+    "exceptions",
+    "extract",
+    "factory",
+    "inference",
+    "io",
     "plugins",
+    "prompting",
+    "providers",
+    "resolver",
+    "schema",
+    "visualization",
+    "visualize",
 ]
 
-_CACHE: Dict[str, Any] = {}
+_CACHE: dict[str, Any] = {}
 
 
 def extract(*args: Any, **kwargs: Any):
-  """Top-level API: lx.extract(...)."""
-  return extract_func(*args, **kwargs)
+    """Top-level API: lx.extract(...)."""
+    return extract_func(*args, **kwargs)
 
 
 def visualize(*args: Any, **kwargs: Any):
-  """Top-level API: lx.visualize(...)."""
-  return visualization.visualize(*args, **kwargs)
+    """Top-level API: lx.visualize(...)."""
+    return visualization.visualize(*args, **kwargs)
 
 
 # PEP 562 lazy loading
@@ -80,23 +77,23 @@ _LAZY_MODULES = {
     "visualization": "langextract.visualization",
     "core": "langextract.core",
     "plugins": "langextract.plugins",
-    "registry": "langextract.registry",  # Backward compat - will emit warning
+    "registry": "langextract.registry",
 }
 
 
 def __getattr__(name: str) -> Any:
-  if name in _CACHE:
-    return _CACHE[name]
-  modpath = _LAZY_MODULES.get(name)
-  if modpath is None:
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
-  module = importlib.import_module(modpath)
-  # ensure future 'import langextract.<name>' returns the same module
-  sys.modules[f"{__name__}.{name}"] = module
-  setattr(sys.modules[__name__], name, module)
-  _CACHE[name] = module
-  return module
+    if name in _CACHE:
+        return _CACHE[name]
+    modpath = _LAZY_MODULES.get(name)
+    if modpath is None:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    module = importlib.import_module(modpath)
+    # ensure future 'import langextract.<name>' returns the same module
+    sys.modules[f"{__name__}.{name}"] = module
+    setattr(sys.modules[__name__], name, module)
+    _CACHE[name] = module
+    return module
 
 
 def __dir__():
-  return sorted(__all__)
+    return sorted(__all__)

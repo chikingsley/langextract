@@ -22,7 +22,7 @@ changes. If executing the existing test suite without customization, simply
 paste the command line used.
 
 ```
-$ python -m unittest discover ...
+python -m unittest discover ...
 ```
 
 # Checklist:
@@ -44,6 +44,4 @@ $ python -m unittest discover ...
 -   [ ] I have made any needed documentation changes, or noted in the linked
     issue(s) that documentation elsewhere needs updating.
 -   [ ] I have added tests, or I have ensured existing tests cover the changes
--   [ ] I have followed
-    [Google's Python Style Guide](https://google.github.io/styleguide/pyguide.html)
-    and ran `pylint` over the affected code.
+-   [ ] I have followed the project style and ran `ruff check` over the affected code.

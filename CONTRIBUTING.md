@@ -1,5 +1,8 @@
 # How to Contribute
 
+This repository is maintained as **Ling Extract Plus Plus**, Simon's fork/port of LangExtract.
+This fork ships direct upgrades and may introduce breaking API changes.
+
 We would love to accept your patches and contributions to this project.
 
 ## Before you begin
@@ -55,13 +58,13 @@ This project uses automated tools to maintain a consistent code style. Before su
 ```
 
 This script uses:
-- `isort` to organize imports with Google style (single-line imports)
-- `pyink` (Google's fork of Black) to format code according to Google's Python Style Guide
+- `ruff format` for formatting
+- `ruff check --fix` for linting and import sorting
 
 You can also run the formatters manually:
 ```bash
-isort langextract tests
-pyink langextract tests --config pyproject.toml
+ruff format langextract tests
+ruff check --fix langextract tests
 ```
 
 Note: The formatters target only `langextract` and `tests` directories by default to avoid
@@ -87,22 +90,21 @@ pre-commit run --all-files
 All contributions must pass linting checks and unit tests. Please run these locally before submitting your changes:
 
 ```bash
-# Run linting with Pylint 3.x
-pylint --rcfile=.pylintrc langextract tests
+# Run linting
+ruff check langextract tests
 
 # Run tests
 pytest tests
 ```
 
-**Note on Pylint Configuration**: We use a modern, minimal configuration that:
-- Only disables truly noisy checks (not entire categories)
-- Keeps critical error detection enabled
-- Uses plugins for enhanced docstring and type checking
-- Aligns with our pyink formatter (80-char lines, 2-space indents)
+**Note on Ruff Configuration**:
+- Ruff is the single formatter and linter for this repo.
+- Import sorting is handled by Ruff (`I` rules).
+- Formatting is handled by `ruff format`.
 
 For full testing across Python versions:
 ```bash
-tox  # runs pylint + pytest on Python 3.10 and 3.11
+tox  # runs ruff + pytest across configured environments
 ```
 
 ### 5. Adding Custom Model Providers

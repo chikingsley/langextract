@@ -140,7 +140,7 @@ def _build_document_result(pages: list[PageResult]) -> DocumentResult:
             )
             new_words.append(new_word)
 
-        page.words = new_words  # type: ignore[misc]  # frozen field override during build
+        page.words = new_words  # frozen field override during build
         all_words.extend(new_words)
         text_parts.append(page.text)
         char_offset += len(page.text)

@@ -10,7 +10,7 @@ Models ship bundled with the package (no runtime download).
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pymupdf
 
@@ -39,6 +39,72 @@ def _get_ocr_engine() -> RapidOCR:
                 "Install with: uv add rapidocr onnxruntime"
             ) from None
     return _ocr_engine
+
+
+def _parse_word_results(
+    word_results: Any,
+    zoom: float,
+    page_num: int,
+    char_offset: int,
+) -> tuple[list[str], list[WordBbox], int]:
+    """Parse RapidOCR word_results into text parts and WordBbox list.
+
+    word_results is a tuple of tuples grouped by line:
+        ((("Hello", 0.99, [[x0,y0],[x1,y1],[x2,y2],[x3,y3]]), ...), ...)
+
+    Returns:
+        (text_parts, word_bboxes, final_offset)
+    """
+    text_parts: list[str] = []
+    word_bboxes: list[WordBbox] = []
+    current_offset = char_offset
+
+    for line_idx, line_words in enumerate(word_results):
+        if line_idx > 0:
+            text_parts.append("\n")
+            current_offset += 1
+
+        for word_idx, word_entry in enumerate(line_words):
+            word_text: str = str(word_entry[0])
+            bbox_points: list[list[int]] = word_entry[2]
+
+            if not word_text.strip():
+                continue
+
+            if word_idx > 0:
+                text_parts.append(" ")
+                current_offset += 1
+
+            # 4-point polygon in pixel coords → axis-aligned bbox in PDF points
+            xs = [float(p[0]) / zoom for p in bbox_points]
+            ys = [float(p[1]) / zoom for p in bbox_points]
+            x0, x1 = min(xs), max(xs)
+            y0, y1 = min(ys), max(ys)
+
+            word_start = current_offset
+            word_end = word_start + len(word_text)
+
+            word_bboxes.append(
+                WordBbox(
+                    text=word_text,
+                    page=page_num,
+                    x0=x0,
+                    y0=y0,
+                    x1=x1,
+                    y1=y1,
+                    char_start=word_start,
+                    char_end=word_end,
+                )
+            )
+
+            text_parts.append(word_text)
+            current_offset = word_end
+
+    # Trailing newline after last line
+    text_parts.append("\n")
+    current_offset += 1
+
+    return text_parts, word_bboxes, current_offset
 
 
 def extract_page_ocr(
@@ -81,56 +147,14 @@ def extract_page_ocr(
 
     page_text_parts: list[str] = []
     word_bboxes: list[WordBbox] = []
-    current_offset = char_offset
 
-    # result.word_results is a tuple of tuples grouped by line:
-    #   ((("Hello", 0.99, [[x0,y0],[x1,y1],[x2,y2],[x3,y3]]), ...), ...)
-    if result.word_results:
-        for line_idx, line_words in enumerate(result.word_results):
-            if line_idx > 0:
-                # Line break between OCR lines
-                page_text_parts.append("\n")
-                current_offset += 1
-
-            for word_idx, (word_text, _confidence, bbox_points) in enumerate(line_words):
-                if not word_text.strip():
-                    continue
-
-                # Add space between words in the same line
-                if word_idx > 0:
-                    page_text_parts.append(" ")
-                    current_offset += 1
-
-                # RapidOCR returns 4-point polygon in pixel coords:
-                #   [[x0,y0],[x1,y1],[x2,y2],[x3,y3]]
-                # Convert to axis-aligned bbox in PDF coordinates (divide by zoom)
-                xs = [p[0] / zoom for p in bbox_points]
-                ys = [p[1] / zoom for p in bbox_points]
-                x0, x1 = min(xs), max(xs)
-                y0, y1 = min(ys), max(ys)
-
-                word_start = current_offset
-                word_end = word_start + len(word_text)
-
-                word_bboxes.append(
-                    WordBbox(
-                        text=word_text,
-                        page=page_num,
-                        x0=x0,
-                        y0=y0,
-                        x1=x1,
-                        y1=y1,
-                        char_start=word_start,
-                        char_end=word_end,
-                    )
-                )
-
-                page_text_parts.append(word_text)
-                current_offset = word_end
-
-        # Trailing newline after last line
-        page_text_parts.append("\n")
-        current_offset += 1
+    if result.word_results:  # type: ignore[union-attr]
+        page_text_parts, word_bboxes, _ = _parse_word_results(
+            result.word_results,  # type: ignore[union-attr]
+            zoom=zoom,
+            page_num=page_num,
+            char_offset=char_offset,
+        )
 
     page_text = "".join(page_text_parts)
 

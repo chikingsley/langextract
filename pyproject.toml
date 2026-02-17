@@ -39,8 +39,6 @@ dependencies = [
     "regex>=2023.0.0",
     "tqdm>=4.64.0",
     "pymupdf>=1.27.1",
-    "rapidocr>=3.6.0",
-    "onnxruntime>=1.24.1",
 ]
 
 [project.urls]
@@ -52,11 +50,12 @@ dependencies = [
 "DOI" = "https://doi.org/10.5281/zenodo.17015089"
 
 [project.scripts]
-contract-extract = "langextract.contract_cli:main"
+langextract-cli = "langextract.cli:main"
 
 [project.optional-dependencies]
 openai = ["openai>=1.50.0"]
-all = ["openai>=1.50.0"]
+ocr = ["rapidocr>=3.6.0", "onnxruntime>=1.24.1"]
+all = ["openai>=1.50.0", "rapidocr>=3.6.0", "onnxruntime>=1.24.1"]
 dev = [
     "pytype>=2024.10.11",
     "ruff==0.15.1",

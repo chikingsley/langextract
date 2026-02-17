@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Literal
 
 
 @dataclass(frozen=True)
@@ -24,7 +25,7 @@ class PageResult:
     """Extraction result for a single page."""
 
     page_num: int  # 0-indexed
-    source: str  # "native" or "ocr"
+    source: Literal["native", "ocr"]
     text: str
     words: list[WordBbox] = field(default_factory=list)
     width: float = 0.0  # page width in points

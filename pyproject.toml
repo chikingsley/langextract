@@ -58,7 +58,6 @@ langextract-cli = "langextract.cli:main"
 openai = ["openai>=1.50.0"]
 all = ["openai>=1.50.0"]
 dev = [
-    "pytype>=2024.10.11",
     "ruff==0.15.1",
     "tox>=4.0.0",
     "import-linter>=2.0",

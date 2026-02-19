@@ -281,6 +281,10 @@ def run_extract(args: argparse.Namespace) -> dict[str, Any]:
     prompt = _load_prompt(args)
     examples = _load_examples(args)
 
+    language_model_params: dict[str, Any] = {}
+    if args.max_output_tokens is not None:
+        language_model_params["max_output_tokens"] = args.max_output_tokens
+
     doc = lx.extract(
         text,
         prompt_description=prompt,
@@ -292,6 +296,7 @@ def run_extract(args: argparse.Namespace) -> dict[str, Any]:
         temperature=args.temperature,
         show_progress=args.show_progress,
         prompt_validation_level=pv.PromptValidationLevel.ERROR,
+        language_model_params=language_model_params or None,
     )
     first = doc[0] if isinstance(doc, list) else doc
     if first is None:
@@ -362,6 +367,12 @@ def _build_parser() -> argparse.ArgumentParser:
         type=float,
         default=0.0,
         help="Sampling temperature (default: 0.0).",
+    )
+    extract_parser.add_argument(
+        "--max-output-tokens",
+        type=int,
+        default=None,
+        help="Maximum output tokens per model call. Use to prevent truncation on large docs.",
     )
     extract_parser.add_argument(
         "--show-progress",

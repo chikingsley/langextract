@@ -40,6 +40,9 @@ _API_CONFIG_KEYS: Final[set[str]] = {
     "tools",
     "stop_sequences",
     "candidate_count",
+    "max_output_tokens",
+    "top_p",
+    "top_k",
 }
 
 

@@ -132,6 +132,61 @@ class RapidOcrBackend(OcrBackend):
             text = f"{text}\n"
         return OcrBackendResult(text=text, words=words)
 
+    def _parse_txts_and_boxes(
+        self,
+        txts: Any,
+        boxes: Any,
+        *,
+        zoom: float,
+    ) -> OcrBackendResult:
+        text_parts: list[str] = []
+        words: list[OcrWord] = []
+        current_offset = 0
+
+        txt_list = list(txts or [])
+        box_list = list(boxes or [])
+        count = min(len(txt_list), len(box_list))
+
+        for idx in range(count):
+            word_text = str(txt_list[idx]).strip()
+            if not word_text:
+                continue
+
+            if text_parts:
+                text_parts.append("\n")
+                current_offset += 1
+
+            raw_box = box_list[idx]
+            if hasattr(raw_box, "tolist"):
+                raw_box = raw_box.tolist()
+            points = list(raw_box)
+            if len(points) < 4:
+                continue
+
+            xs = [float(point[0]) / zoom for point in points]
+            ys = [float(point[1]) / zoom for point in points]
+            word_start = current_offset
+            word_end = word_start + len(word_text)
+
+            words.append(
+                OcrWord(
+                    text=word_text,
+                    x0=min(xs),
+                    y0=min(ys),
+                    x1=max(xs),
+                    y1=max(ys),
+                    char_start=word_start,
+                    char_end=word_end,
+                )
+            )
+            text_parts.append(word_text)
+            current_offset = word_end
+
+        text = "".join(text_parts)
+        if text:
+            text = f"{text}\n"
+        return OcrBackendResult(text=text, words=words)
+
     def extract_page(
         self,
         *,
@@ -149,6 +204,10 @@ class RapidOcrBackend(OcrBackend):
             pixmap.n,
         )
         result = self._get_engine()(image_array, return_word_box=True)
+        txts = getattr(result, "txts", None)
+        boxes = getattr(result, "boxes", None)
+        if txts and boxes:
+            return self._parse_txts_and_boxes(txts, boxes, zoom=zoom)
         word_results = getattr(result, "word_results", None)
         if not word_results:
             return OcrBackendResult(text="", words=[])

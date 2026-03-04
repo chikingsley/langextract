@@ -110,9 +110,24 @@ class OpenAILanguageModel(base_model.BaseLanguageModel):
         super().__init__(constraint=schema.Constraint(constraint_type=schema.ConstraintType.NONE))
         self._extra_kwargs = kwargs or {}
 
+    def _normalize_reasoning_params(self, config: dict) -> dict:
+        """Normalize reasoning parameters for API compatibility.
+
+        Converts flat 'reasoning_effort' to nested 'reasoning' structure
+        expected by the OpenAI Responses API.
+        """
+        result = config.copy()
+        if "reasoning_effort" in result:
+            effort = result.pop("reasoning_effort")
+            reasoning = result.get("reasoning", {}) or {}
+            reasoning.setdefault("effort", effort)
+            result["reasoning"] = reasoning
+        return result
+
     def _process_single_prompt(self, prompt: str, config: dict) -> core_types.ScoredOutput:
         """Process a single prompt and return a ScoredOutput."""
         try:
+            config = self._normalize_reasoning_params(config)
             system_message = ""
             if self.format_type == data.FormatType.JSON:
                 system_message = "You are a helpful assistant that responds in JSON format."
@@ -211,6 +226,7 @@ class OpenAILanguageModel(base_model.BaseLanguageModel):
             "logprobs",
             "top_logprobs",
             "reasoning",
+            "reasoning_effort",
             "response_format",
         ]:
             if key in merged_kwargs:

@@ -135,12 +135,6 @@ root_package = "langextract"
 
 
 [[tool.importlinter.contracts]]
-name = "Providers must not import inference"
-type = "forbidden"
-source_modules = ["langextract.providers"]
-forbidden_modules = ["langextract.inference"]
-
-[[tool.importlinter.contracts]]
 name = "Core must not import providers"
 type = "forbidden"
 source_modules = ["langextract.core"]

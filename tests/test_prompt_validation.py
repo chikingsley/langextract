@@ -50,17 +50,6 @@ class TestExports:
 class TestValidationLevels:
     def test_off_level_does_nothing(self):
         """OFF level should not log or raise, even with failed issues."""
-        issue = ValidationIssue(
-            example_index=0,
-            example_id=None,
-            extraction_class="entity",
-            extraction_text_preview="some text",
-            alignment_status=None,
-            issue_kind=ValidationIssue.__dataclass_fields__["issue_kind"].type.__args__[0]
-            if hasattr(ValidationIssue.__dataclass_fields__["issue_kind"].type, "__args__")
-            else None,
-        )
-        # Build the issue_kind properly from the module internals
         from langextract.prompt_validation import _IssueKind
 
         issue = ValidationIssue(

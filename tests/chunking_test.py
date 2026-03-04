@@ -15,12 +15,9 @@
 import textwrap
 from unittest import mock
 
-from absl.testing import absltest
-from absl.testing import parameterized
-
+from absl.testing import absltest, parameterized
 from langextract import chunking
-from langextract.core import data
-from langextract.core import tokenizer
+from langextract.core import data, tokenizer
 
 
 class SentenceIterTest(absltest.TestCase):
@@ -96,8 +93,8 @@ class ChunkIteratorTest(absltest.TestCase):
   def test_sentence_with_multiple_newlines_and_right_interval(self):
     text = (
         "This is a sentence\n\n"
-        + "This is a longer sentence\n\n"
-        + "Mr\n\nBond\n\nasks why?"
+         "This is a longer sentence\n\n"
+         "Mr\n\nBond\n\nasks why?"
     )
     tokenized_text = tokenizer.tokenize(text)
     chunk_interval = tokenizer.TokenInterval(

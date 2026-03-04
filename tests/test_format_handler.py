@@ -1,14 +1,10 @@
 """Tests for the centralized FormatHandler (fork-specific feature)."""
 
-import json
 
 import pytest
-import yaml
-
 from langextract.core.data import ATTRIBUTE_SUFFIX, EXTRACTIONS_KEY, Extraction, FormatType
 from langextract.core.exceptions import FormatParseError
 from langextract.core.format_handler import FormatHandler
-
 
 # ---------------------------------------------------------------------------
 # Init defaults

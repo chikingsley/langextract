@@ -22,16 +22,10 @@ pylint warnings are expected for test fixtures.
 
 from unittest import mock
 
-from absl.testing import absltest
-from absl.testing import parameterized
-
+from absl.testing import absltest, parameterized
 from langextract import exceptions
-from langextract.core import base_model
-from langextract.core import data
-from langextract.core import types
-from langextract.providers import gemini
-from langextract.providers import ollama
-from langextract.providers import openai
+from langextract.core import base_model, data, types
+from langextract.providers import gemini, ollama, openai
 
 
 class TestBaseLanguageModel(absltest.TestCase):

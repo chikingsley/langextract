@@ -245,7 +245,7 @@ def extract(
             "max_workers": max_workers,
         }
 
-        # TODO(v2.0.0): Remove gemini_schema parameter
+        # Deprecated: gemini_schema parameter (auto-handled by schema constraints now)
         if "gemini_schema" in (language_model_params or {}):
             warnings.warn(
                 "'gemini_schema' is deprecated. Schema constraints are now "

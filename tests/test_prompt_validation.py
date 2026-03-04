@@ -4,7 +4,6 @@ import copy
 import logging
 
 import pytest
-
 from langextract.core.data import AlignmentStatus, ExampleData, Extraction
 from langextract.prompt_validation import (
     AlignmentPolicy,
@@ -15,7 +14,6 @@ from langextract.prompt_validation import (
     handle_alignment_report,
     validate_prompt_alignment,
 )
-
 
 # ---------------------------------------------------------------------------
 # Exports
@@ -179,10 +177,10 @@ class TestNoMutation:
         originals = copy.deepcopy(examples)
         validate_prompt_alignment(examples)
 
-        for orig, ex in zip(originals, examples):
+        for orig, ex in zip(originals, examples, strict=False):
             assert orig.text == ex.text
             assert len(orig.extractions) == len(ex.extractions)
-            for o_ext, e_ext in zip(orig.extractions, ex.extractions):
+            for o_ext, e_ext in zip(orig.extractions, ex.extractions, strict=False):
                 assert o_ext.extraction_class == e_ext.extraction_class
                 assert o_ext.extraction_text == e_ext.extraction_text
                 assert o_ext.alignment_status == e_ext.alignment_status

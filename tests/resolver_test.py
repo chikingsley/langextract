@@ -13,15 +13,15 @@
 # limitations under the License.
 
 import textwrap
-from typing import Sequence
+from typing import TYPE_CHECKING
 
-from absl.testing import absltest
-from absl.testing import parameterized
-
+from absl.testing import absltest, parameterized
 from langextract import chunking
 from langextract import resolver as resolver_lib
-from langextract.core import data
-from langextract.core import tokenizer
+from langextract.core import data, tokenizer
+
+if TYPE_CHECKING:
+  from collections.abc import Sequence
 
 
 def assert_char_interval_match_source(
@@ -59,84 +59,84 @@ def assert_char_interval_match_source(
 class ParserTest(parameterized.TestCase):
 
   @parameterized.named_parameters(
-      dict(
-          testcase_name="json_invalid_input",
-          resolver=resolver_lib.Resolver(
+      {
+          "testcase_name": "json_invalid_input",
+          "resolver": resolver_lib.Resolver(
               format_type=data.FormatType.JSON,
               fence_output=True,
               strict_fences=True,
           ),
-          input_text="invalid input",
-          expected_exception=resolver_lib.ResolverParsingError,
-          expected_regex=".*fence markers.*",
-      ),
-      dict(
-          testcase_name="json_missing_markers",
-          resolver=resolver_lib.Resolver(
+          "input_text": "invalid input",
+          "expected_exception": resolver_lib.ResolverParsingError,
+          "expected_regex": ".*fence markers.*",
+      },
+      {
+          "testcase_name": "json_missing_markers",
+          "resolver": resolver_lib.Resolver(
               format_type=data.FormatType.JSON,
               fence_output=True,
               strict_fences=True,
           ),
-          input_text='[{"key": "value"}]',
-          expected_exception=resolver_lib.ResolverParsingError,
-          expected_regex=".*fence markers.*",
-      ),
-      dict(
-          testcase_name="json_empty_string",
-          resolver=resolver_lib.Resolver(
+          "input_text": '[{"key": "value"}]',
+          "expected_exception": resolver_lib.ResolverParsingError,
+          "expected_regex": ".*fence markers.*",
+      },
+      {
+          "testcase_name": "json_empty_string",
+          "resolver": resolver_lib.Resolver(
               format_type=data.FormatType.JSON,
               fence_output=True,
           ),
-          input_text="",
-          expected_exception=ValueError,
-          expected_regex=".*must be a non-empty string.*",
-      ),
-      dict(
-          testcase_name="json_partial_markers",
-          resolver=resolver_lib.Resolver(
+          "input_text": "",
+          "expected_exception": ValueError,
+          "expected_regex": ".*must be a non-empty string.*",
+      },
+      {
+          "testcase_name": "json_partial_markers",
+          "resolver": resolver_lib.Resolver(
               format_type=data.FormatType.JSON,
               fence_output=True,
               strict_fences=True,
           ),
-          input_text='```json\n{"key": "value"',
-          expected_exception=resolver_lib.ResolverParsingError,
-          expected_regex=".*fence markers.*",
-      ),
-      dict(
-          testcase_name="yaml_invalid_input",
-          resolver=resolver_lib.Resolver(
+          "input_text": '```json\n{"key": "value"',
+          "expected_exception": resolver_lib.ResolverParsingError,
+          "expected_regex": ".*fence markers.*",
+      },
+      {
+          "testcase_name": "yaml_invalid_input",
+          "resolver": resolver_lib.Resolver(
               format_type=data.FormatType.YAML,
               fence_output=True,
               strict_fences=True,
           ),
-          input_text="invalid input",
-          expected_exception=resolver_lib.ResolverParsingError,
-          expected_regex=".*fence markers.*",
-      ),
-      dict(
-          testcase_name="yaml_missing_markers",
-          resolver=resolver_lib.Resolver(
+          "input_text": "invalid input",
+          "expected_exception": resolver_lib.ResolverParsingError,
+          "expected_regex": ".*fence markers.*",
+      },
+      {
+          "testcase_name": "yaml_missing_markers",
+          "resolver": resolver_lib.Resolver(
               format_type=data.FormatType.YAML,
               fence_output=True,
               strict_fences=True,
           ),
-          input_text='[{"key": "value"}]',
-          expected_exception=resolver_lib.ResolverParsingError,
-          expected_regex=".*fence markers.*",
-      ),
-      dict(
-          testcase_name="yaml_empty_content",
-          resolver=resolver_lib.Resolver(
+          "input_text": '[{"key": "value"}]',
+          "expected_exception": resolver_lib.ResolverParsingError,
+          "expected_regex": ".*fence markers.*",
+      },
+      {
+          "testcase_name": "yaml_empty_content",
+          "resolver": resolver_lib.Resolver(
               format_type=data.FormatType.YAML,
               fence_output=True,
           ),
-          input_text="```yaml\n```",
-          expected_exception=resolver_lib.ResolverParsingError,
-          expected_regex=(
+          "input_text": "```yaml\n```",
+          "expected_exception": resolver_lib.ResolverParsingError,
+          "expected_regex": (
               ".*Content must be a mapping with an"
               f" '{data.EXTRACTIONS_KEY}' key.*"
           ),
-      ),
+      },
   )
   def test_parser_error_cases(
       self, resolver, input_text, expected_exception, expected_regex
@@ -148,9 +148,9 @@ class ParserTest(parameterized.TestCase):
 class ExtractOrderedEntitiesTest(parameterized.TestCase):
 
   @parameterized.named_parameters(
-      dict(
-          testcase_name="valid_input",
-          test_input=[
+      {
+          "testcase_name": "valid_input",
+          "test_input": [
               {
                   "medication": "Naprosyn",
                   "medication_index": 4,
@@ -166,7 +166,7 @@ class ExtractOrderedEntitiesTest(parameterized.TestCase):
                   "frequency_index": 1,
               },
           ],
-          expected_output=[
+          "expected_output": [
               data.Extraction(
                   extraction_class="frequency",
                   extraction_text="daily",
@@ -198,15 +198,15 @@ class ExtractOrderedEntitiesTest(parameterized.TestCase):
                   group_index=0,
               ),
           ],
-      ),
-      dict(
-          testcase_name="empty_input",
-          test_input=[],
-          expected_output=[],
-      ),
-      dict(
-          testcase_name="mixed_index_order",
-          test_input=[
+      },
+      {
+          "testcase_name": "empty_input",
+          "test_input": [],
+          "expected_output": [],
+      },
+      {
+          "testcase_name": "mixed_index_order",
+          "test_input": [
               {
                   "medication": "Ibuprofen",
                   "medication_index": 2,
@@ -220,7 +220,7 @@ class ExtractOrderedEntitiesTest(parameterized.TestCase):
                   "duration_index": 2,
               },
           ],
-          expected_output=[
+          "expected_output": [
               data.Extraction(
                   extraction_class="dosage",
                   extraction_text="400mg",
@@ -246,15 +246,15 @@ class ExtractOrderedEntitiesTest(parameterized.TestCase):
                   group_index=1,
               ),
           ],
-      ),
-      dict(
-          testcase_name="missing_index_key",
-          test_input=[{
+      },
+      {
+          "testcase_name": "missing_index_key",
+          "test_input": [{
               "medication": "Aspirin",
               "dosage": "325mg",
               "dosage_index": 1,
           }],
-          expected_output=[
+          "expected_output": [
               data.Extraction(
                   extraction_class="dosage",
                   extraction_text="325mg",
@@ -262,22 +262,22 @@ class ExtractOrderedEntitiesTest(parameterized.TestCase):
                   group_index=0,
               ),
           ],
-      ),
-      dict(
-          testcase_name="all_indices_missing",
-          test_input=[
+      },
+      {
+          "testcase_name": "all_indices_missing",
+          "test_input": [
               {"medication": "Aspirin", "dosage": "325mg"},
               {"medication": "Ibuprofen", "dosage": "400mg"},
           ],
-          expected_output=[],
-      ),
-      dict(
-          testcase_name="single_element_dictionaries",
-          test_input=[
+          "expected_output": [],
+      },
+      {
+          "testcase_name": "single_element_dictionaries",
+          "test_input": [
               {"medication": "Aspirin", "medication_index": 1},
               {"medication": "Ibuprofen", "medication_index": 2},
           ],
-          expected_output=[
+          "expected_output": [
               data.Extraction(
                   extraction_class="medication",
                   extraction_text="Aspirin",
@@ -291,10 +291,10 @@ class ExtractOrderedEntitiesTest(parameterized.TestCase):
                   group_index=1,
               ),
           ],
-      ),
-      dict(
-          testcase_name="duplicate_indices_unchanged",
-          test_input=[{
+      },
+      {
+          "testcase_name": "duplicate_indices_unchanged",
+          "test_input": [{
               "medication": "Aspirin",
               "medication_index": 1,
               "dosage": "325mg",
@@ -302,7 +302,7 @@ class ExtractOrderedEntitiesTest(parameterized.TestCase):
               "form": "tablet",
               "form_index": 1,
           }],
-          expected_output=[
+          "expected_output": [
               data.Extraction(
                   extraction_class="medication",
                   extraction_text="Aspirin",
@@ -322,16 +322,16 @@ class ExtractOrderedEntitiesTest(parameterized.TestCase):
                   group_index=0,
               ),
           ],
-      ),
-      dict(
-          testcase_name="negative_indices",
-          test_input=[{
+      },
+      {
+          "testcase_name": "negative_indices",
+          "test_input": [{
               "medication": "Aspirin",
               "medication_index": -1,
               "dosage": "325mg",
               "dosage_index": -2,
           }],
-          expected_output=[
+          "expected_output": [
               data.Extraction(
                   extraction_class="dosage",
                   extraction_text="325mg",
@@ -345,15 +345,15 @@ class ExtractOrderedEntitiesTest(parameterized.TestCase):
                   group_index=0,
               ),
           ],
-      ),
-      dict(
-          testcase_name="index_without_data_key_ignored",
-          test_input=[{
+      },
+      {
+          "testcase_name": "index_without_data_key_ignored",
+          "test_input": [{
               "medication_index": 1,
               "dosage": "325mg",
               "dosage_index": 2,
           }],
-          expected_output=[
+          "expected_output": [
               data.Extraction(
                   extraction_class="dosage",
                   extraction_text="325mg",
@@ -361,20 +361,20 @@ class ExtractOrderedEntitiesTest(parameterized.TestCase):
                   group_index=0,
               ),
           ],
-      ),
-      dict(
-          testcase_name="no_index_suffix",
-          resolver=resolver_lib.Resolver(
+      },
+      {
+          "testcase_name": "no_index_suffix",
+          "resolver": resolver_lib.Resolver(
               extraction_index_suffix=None,
               format_type=data.FormatType.JSON,
           ),
-          test_input=[
+          "test_input": [
               {"medication": "Aspirin"},
               {"medication": "Ibuprofen"},
               {"dosage": "325mg"},
               {"dosage": "400mg"},
           ],
-          expected_output=[
+          "expected_output": [
               data.Extraction(
                   extraction_class="medication",
                   extraction_text="Aspirin",
@@ -400,14 +400,14 @@ class ExtractOrderedEntitiesTest(parameterized.TestCase):
                   group_index=3,
               ),
           ],
-      ),
-      dict(
-          testcase_name="attributes_suffix",
-          resolver=resolver_lib.Resolver(
+      },
+      {
+          "testcase_name": "attributes_suffix",
+          "resolver": resolver_lib.Resolver(
               extraction_index_suffix=None,
               format_type=data.FormatType.JSON,
           ),
-          test_input=[
+          "test_input": [
               {
                   "patient": "Jane Doe",
                   "patient_attributes": {
@@ -423,7 +423,7 @@ class ExtractOrderedEntitiesTest(parameterized.TestCase):
                   },
               },
           ],
-          expected_output=[
+          "expected_output": [
               data.Extraction(
                   extraction_class="patient",
                   extraction_text="Jane Doe",
@@ -445,10 +445,10 @@ class ExtractOrderedEntitiesTest(parameterized.TestCase):
                   },
               ),
           ],
-      ),
-      dict(
-          testcase_name="indices_and_attributes",
-          test_input=[
+      },
+      {
+          "testcase_name": "indices_and_attributes",
+          "test_input": [
               {
                   "patient": "John Doe",
                   "patient_index": 2,
@@ -476,7 +476,7 @@ class ExtractOrderedEntitiesTest(parameterized.TestCase):
                   },
               },
           ],
-          expected_output=[
+          "expected_output": [
               data.Extraction(
                   extraction_class="condition",
                   extraction_text="hypertension",
@@ -516,7 +516,7 @@ class ExtractOrderedEntitiesTest(parameterized.TestCase):
                   },
               ),
           ],
-      ),
+      },
   )
   def test_extract_ordered_extractions_success(
       self,
@@ -532,31 +532,31 @@ class ExtractOrderedEntitiesTest(parameterized.TestCase):
     self.assertEqual(actual_output, expected_output)
 
   @parameterized.named_parameters(
-      dict(
-          testcase_name="non_integer_indices",
-          resolver=resolver_lib.Resolver(
+      {
+          "testcase_name": "non_integer_indices",
+          "resolver": resolver_lib.Resolver(
               format_type=data.FormatType.JSON,
               extraction_index_suffix=resolver_lib.DEFAULT_INDEX_SUFFIX,
           ),
-          test_input=[{
+          "test_input": [{
               "medication": "Aspirin",
               "medication_index": "first",
               "dosage": "325mg",
               "dosage_index": "second",
           }],
-          expected_exception=ValueError,
-          expected_regex=".*must be an integer.*",
-      ),
-      dict(
-          testcase_name="float_indices",
-          resolver=resolver_lib.Resolver(
+          "expected_exception": ValueError,
+          "expected_regex": ".*must be an integer.*",
+      },
+      {
+          "testcase_name": "float_indices",
+          "resolver": resolver_lib.Resolver(
               format_type=data.FormatType.JSON,
               extraction_index_suffix=resolver_lib.DEFAULT_INDEX_SUFFIX,
           ),
-          test_input=[{"medication": "Aspirin", "medication_index": 1.0}],
-          expected_exception=ValueError,
-          expected_regex=".*must be an integer.*",
-      ),
+          "test_input": [{"medication": "Aspirin", "medication_index": 1.0}],
+          "expected_exception": ValueError,
+          "expected_regex": ".*must be an integer.*",
+      },
   )
   def test_extract_ordered_extractions_exceptions(
       self, resolver, test_input, expected_exception, expected_regex
@@ -1450,12 +1450,13 @@ class AlignEntitiesTest(parameterized.TestCase):
               )
           ]],
       ),
-      dict(
-          testcase_name="fuzzy_alignment_success",
+      {
+          "testcase_name": "fuzzy_alignment_success",
           # Tests fuzzy alignment alongside exact matching. Shows different alignment statuses:
-          # "heart problems" gets fuzzy match, "severe heart problems complications" gets lesser match.
+          # "heart problems" gets fuzzy match,
+          # "severe heart problems complications" gets lesser match.
           # Demonstrates both fuzzy and lesser matching working with 75% threshold.
-          extractions=[
+          "extractions": [
               [
                   data.Extraction(
                       extraction_class="condition",
@@ -1469,8 +1470,8 @@ class AlignEntitiesTest(parameterized.TestCase):
                   )
               ],
           ],
-          source_text="Patient has severe heart problems today.",
-          expected_output=[
+          "source_text": "Patient has severe heart problems today.",
+          "expected_output": [
               [
                   data.Extraction(
                       extraction_class="condition",
@@ -1494,13 +1495,14 @@ class AlignEntitiesTest(parameterized.TestCase):
                   )
               ],
           ],
-          enable_fuzzy_alignment=True,
-      ),
-      dict(
-          testcase_name="fuzzy_alignment_below_threshold",
+          "enable_fuzzy_alignment": True,
+      },
+      {
+          "testcase_name": "fuzzy_alignment_below_threshold",
           # Tests fuzzy alignment failure when overlap ratio < _FUZZY_ALIGNMENT_MIN_THRESHOLD (75%).
-          # No tokens overlap between "completely different medicine" and "Patient takes aspirin daily."
-          extractions=[
+          # No tokens overlap between "completely different medicine"
+          # and "Patient takes aspirin daily."
+          "extractions": [
               [
                   data.Extraction(
                       extraction_class="medication",
@@ -1508,8 +1510,8 @@ class AlignEntitiesTest(parameterized.TestCase):
                   )
               ],
           ],
-          source_text="Patient takes aspirin daily.",
-          expected_output=[[
+          "source_text": "Patient takes aspirin daily.",
+          "expected_output": [[
               data.Extraction(
                   extraction_class="medication",
                   extraction_text="completely different medicine",
@@ -1517,12 +1519,12 @@ class AlignEntitiesTest(parameterized.TestCase):
                   alignment_status=None,
               )
           ]],
-          enable_fuzzy_alignment=True,
-      ),
-      dict(
-          testcase_name="accept_match_lesser_disabled",
+          "enable_fuzzy_alignment": True,
+      },
+      {
+          "testcase_name": "accept_match_lesser_disabled",
           # Tests accept_match_lesser=False with fuzzy fallback.
-          extractions=[
+          "extractions": [
               [
                   data.Extraction(
                       extraction_class="condition",
@@ -1530,8 +1532,8 @@ class AlignEntitiesTest(parameterized.TestCase):
                   )
               ],
           ],
-          source_text="Patient has heart problems today.",
-          expected_output=[[
+          "source_text": "Patient has heart problems today.",
+          "expected_output": [[
               data.Extraction(
                   extraction_class="condition",
                   extraction_text="patient heart problems today",
@@ -1542,22 +1544,23 @@ class AlignEntitiesTest(parameterized.TestCase):
                   alignment_status=data.AlignmentStatus.MATCH_FUZZY,
               )
           ]],
-          enable_fuzzy_alignment=True,
-          accept_match_lesser=False,
-      ),
-      dict(
-          testcase_name="fuzzy_alignment_subset_window",
-          # Extraction is a subset of a longer source clause; ensures extra tokens do not penalise score.
-          extractions=[[
+          "enable_fuzzy_alignment": True,
+          "accept_match_lesser": False,
+      },
+      {
+          "testcase_name": "fuzzy_alignment_subset_window",
+          # Extraction is a subset of a longer source clause;
+          # ensures extra tokens do not penalise score.
+          "extractions": [[
               data.Extraction(
                   extraction_class="tendon",
                   extraction_text="The iliopsoas tendon is intact",
               )
           ]],
-          source_text=(
+          "source_text": (
               "The iliopsoas and proximal hamstring tendons are intact."
           ),
-          expected_output=[[
+          "expected_output": [[
               data.Extraction(
                   extraction_class="tendon",
                   extraction_text="The iliopsoas tendon is intact",
@@ -1568,13 +1571,13 @@ class AlignEntitiesTest(parameterized.TestCase):
                   alignment_status=data.AlignmentStatus.MATCH_FUZZY,
               )
           ]],
-          enable_fuzzy_alignment=True,
-          accept_match_lesser=False,
-      ),
-      dict(
-          testcase_name="fuzzy_alignment_with_reordered_words",
+          "enable_fuzzy_alignment": True,
+          "accept_match_lesser": False,
+      },
+      {
+          "testcase_name": "fuzzy_alignment_with_reordered_words",
           # Tests fuzzy alignment's ability to handle reordered words in the extraction.
-          extractions=[[
+          "extractions": [[
               data.Extraction(
                   extraction_class="condition",
                   extraction_text="problems heart",  # Reordered words
@@ -1582,8 +1585,8 @@ class AlignEntitiesTest(parameterized.TestCase):
                   alignment_status=data.AlignmentStatus.MATCH_FUZZY,
               )
           ]],
-          source_text="Patient has severe heart problems today.",
-          expected_output=[[
+          "source_text": "Patient has severe heart problems today.",
+          "expected_output": [[
               data.Extraction(
                   extraction_class="condition",
                   extraction_text="problems heart",
@@ -1595,19 +1598,20 @@ class AlignEntitiesTest(parameterized.TestCase):
                   alignment_status=data.AlignmentStatus.MATCH_FUZZY,
               )
           ]],
-          enable_fuzzy_alignment=True,
-      ),
-      dict(
-          testcase_name="fuzzy_alignment_fails_low_ratio",
-          # An extraction that partially overlaps but is below the fuzzy threshold should not be aligned.
-          extractions=[[
+          "enable_fuzzy_alignment": True,
+      },
+      {
+          "testcase_name": "fuzzy_alignment_fails_low_ratio",
+          # An extraction that partially overlaps but is below
+          # the fuzzy threshold should not be aligned.
+          "extractions": [[
               data.Extraction(
                   extraction_class="symptom",
                   extraction_text="headache and fever",
               )
           ]],
-          source_text="Patient reports back pain and a fever.",
-          expected_output=[[
+          "source_text": "Patient reports back pain and a fever.",
+          "expected_output": [[
               data.Extraction(
                   extraction_class="symptom",
                   extraction_text="headache and fever",
@@ -1615,22 +1619,22 @@ class AlignEntitiesTest(parameterized.TestCase):
                   alignment_status=None,
               )
           ]],
-          enable_fuzzy_alignment=True,
-      ),
-      dict(
-          testcase_name="fuzzy_alignment_partial_overlap_success",
+          "enable_fuzzy_alignment": True,
+      },
+      {
+          "testcase_name": "fuzzy_alignment_partial_overlap_success",
           # An extraction where the number of matched tokens divided by total extraction tokens
           # is >= the threshold (3/4 = 0.75).
-          extractions=[[
+          "extractions": [[
               data.Extraction(
                   extraction_class="finding",
                   extraction_text="mild degenerative disc disease",
               )
           ]],
-          source_text=(
+          "source_text": (
               "Findings consistent with degenerative disc disease at L5-S1."
           ),
-          expected_output=[[
+          "expected_output": [[
               data.Extraction(
                   extraction_class="finding",
                   extraction_text="mild degenerative disc disease",
@@ -1642,8 +1646,8 @@ class AlignEntitiesTest(parameterized.TestCase):
                   alignment_status=data.AlignmentStatus.MATCH_FUZZY,
               )
           ]],
-          enable_fuzzy_alignment=True,
-      ),
+          "enable_fuzzy_alignment": True,
+      },
   )
   def test_extraction_alignment(
       self,
@@ -1751,14 +1755,14 @@ class ResolverTest(parameterized.TestCase):
     )
 
   @parameterized.named_parameters(
-      dict(
-          testcase_name="json_with_fence",
-          resolver=resolver_lib.Resolver(
+      {
+          "testcase_name": "json_with_fence",
+          "resolver": resolver_lib.Resolver(
               fence_output=True,
               format_type=data.FormatType.JSON,
               extraction_index_suffix=resolver_lib.DEFAULT_INDEX_SUFFIX,
           ),
-          input_text=textwrap.dedent(f"""\
+          "input_text": textwrap.dedent(f"""\
             ```json
             {{
               "{data.EXTRACTIONS_KEY}": [
@@ -1779,16 +1783,16 @@ class ResolverTest(parameterized.TestCase):
               ]
             }}
             ```"""),
-          expected_output=_EXPECTED_TWO_MEDICATIONS_ANNOTATED,
-      ),
-      dict(
-          testcase_name="yaml_with_fence",
-          resolver=resolver_lib.Resolver(
+          "expected_output": _EXPECTED_TWO_MEDICATIONS_ANNOTATED,
+      },
+      {
+          "testcase_name": "yaml_with_fence",
+          "resolver": resolver_lib.Resolver(
               fence_output=True,
               format_type=data.FormatType.YAML,
               extraction_index_suffix=resolver_lib.DEFAULT_INDEX_SUFFIX,
           ),
-          input_text=textwrap.dedent(f"""\
+          "input_text": textwrap.dedent(f"""\
             ```yaml
             {data.EXTRACTIONS_KEY}:
               - medication: "Naprosyn"
@@ -1803,28 +1807,28 @@ class ResolverTest(parameterized.TestCase):
                 duration: "for one month"
                 duration_index: 10
             ```"""),
-          expected_output=_EXPECTED_TWO_MEDICATIONS_ANNOTATED,
-      ),
-      dict(
-          testcase_name="json_no_fence",
-          resolver=resolver_lib.Resolver(
+          "expected_output": _EXPECTED_TWO_MEDICATIONS_ANNOTATED,
+      },
+      {
+          "testcase_name": "json_no_fence",
+          "resolver": resolver_lib.Resolver(
               fence_output=False,
               format_type=data.FormatType.JSON,
               extraction_index_suffix=resolver_lib.DEFAULT_INDEX_SUFFIX,
           ),
-          input_text=_TWO_MEDICATIONS_JSON_UNDELIMITED,
-          expected_output=_EXPECTED_TWO_MEDICATIONS_ANNOTATED,
-      ),
-      dict(
-          testcase_name="yaml_no_fence",
-          resolver=resolver_lib.Resolver(
+          "input_text": _TWO_MEDICATIONS_JSON_UNDELIMITED,
+          "expected_output": _EXPECTED_TWO_MEDICATIONS_ANNOTATED,
+      },
+      {
+          "testcase_name": "yaml_no_fence",
+          "resolver": resolver_lib.Resolver(
               fence_output=False,
               format_type=data.FormatType.YAML,
               extraction_index_suffix=resolver_lib.DEFAULT_INDEX_SUFFIX,
           ),
-          input_text=_TWO_MEDICATIONS_YAML_UNDELIMITED,
-          expected_output=_EXPECTED_TWO_MEDICATIONS_ANNOTATED,
-      ),
+          "input_text": _TWO_MEDICATIONS_YAML_UNDELIMITED,
+          "expected_output": _EXPECTED_TWO_MEDICATIONS_ANNOTATED,
+      },
   )
   def test_resolve_valid_inputs(self, resolver, input_text, expected_output):
     actual_extractions = resolver.resolve(input_text)
@@ -1910,7 +1914,7 @@ class ResolverTest(parameterized.TestCase):
     )
 
     self.assertEqual(len(aligned_extractions), len(expected_extractions))
-    for expected, actual in zip(expected_extractions, aligned_extractions):
+    for expected, actual in zip(expected_extractions, aligned_extractions, strict=False):
       self.assertDataclassEqual(expected, actual)
     assert_char_interval_match_source(self, text, aligned_extractions)
 
@@ -1961,7 +1965,7 @@ class ResolverTest(parameterized.TestCase):
     )
 
     self.assertEqual(len(aligned_extractions), len(expected_extractions))
-    for expected, actual in zip(expected_extractions, aligned_extractions):
+    for expected, actual in zip(expected_extractions, aligned_extractions, strict=False):
       self.assertDataclassEqual(expected, actual)
 
     assert_char_interval_match_source(self, text, aligned_extractions)
@@ -2150,9 +2154,9 @@ class FenceFallbackTest(parameterized.TestCase):
   """Tests for fence marker fallback behavior."""
 
   @parameterized.named_parameters(
-      dict(
-          testcase_name="with_valid_fences",
-          test_input=textwrap.dedent("""\
+      {
+          "testcase_name": "with_valid_fences",
+          "test_input": textwrap.dedent("""\
               ```json
               {
                 "extractions": [
@@ -2160,37 +2164,37 @@ class FenceFallbackTest(parameterized.TestCase):
                 ]
               }
               ```"""),
-          fence_output=True,
-          strict_fences=False,
-          expected_key="person",
-          expected_value="Marie Curie",
-      ),
-      dict(
-          testcase_name="fallback_no_fences",
-          test_input=textwrap.dedent("""\
+          "fence_output": True,
+          "strict_fences": False,
+          "expected_key": "person",
+          "expected_value": "Marie Curie",
+      },
+      {
+          "testcase_name": "fallback_no_fences",
+          "test_input": textwrap.dedent("""\
               {
                 "extractions": [
                   {"person": "Albert Einstein", "person_attributes": {"field": "physics"}}
                 ]
               }"""),
-          fence_output=True,
-          strict_fences=False,
-          expected_key="person",
-          expected_value="Albert Einstein",
-      ),
-      dict(
-          testcase_name="no_fence_expectation",
-          test_input=textwrap.dedent("""\
+          "fence_output": True,
+          "strict_fences": False,
+          "expected_key": "person",
+          "expected_value": "Albert Einstein",
+      },
+      {
+          "testcase_name": "no_fence_expectation",
+          "test_input": textwrap.dedent("""\
               {
                 "extractions": [
                   {"drug": "Aspirin", "drug_attributes": {"dosage": "100mg"}}
                 ]
               }"""),
-          fence_output=False,
-          strict_fences=False,
-          expected_key="drug",
-          expected_value="Aspirin",
-      ),
+          "fence_output": False,
+          "strict_fences": False,
+          "expected_key": "drug",
+          "expected_value": "Aspirin",
+      },
   )
   def test_parsing_scenarios(
       self,

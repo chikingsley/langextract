@@ -11,8 +11,7 @@ def openai_model():
     with mock.patch("openai.OpenAI"):
         from langextract.providers.openai import OpenAILanguageModel
 
-        model = OpenAILanguageModel(model_id="gpt-4o-mini", api_key="test-key")
-    return model
+        return OpenAILanguageModel(model_id="gpt-4o-mini", api_key="test-key")
 
 
 class TestNormalizeReasoningParams:

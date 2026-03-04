@@ -12,24 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from collections.abc import Sequence
 import dataclasses
 import inspect
 import textwrap
-from typing import Type
+from typing import TYPE_CHECKING
 from unittest import mock
 
-from absl.testing import absltest
-from absl.testing import parameterized
-
-from langextract import annotation
-from langextract import prompting
+from absl.testing import absltest, parameterized
+from langextract import annotation, prompting
 from langextract import resolver as resolver_lib
-from langextract.core import data
-from langextract.core import exceptions
-from langextract.core import tokenizer
-from langextract.core import types
+from langextract.core import data, exceptions, tokenizer, types
 from langextract.providers import gemini
+
+if TYPE_CHECKING:
+  from collections.abc import Sequence
 
 
 class AnnotatorTest(absltest.TestCase):
@@ -635,25 +631,25 @@ class AnnotatorMultipleDocumentTest(parameterized.TestCase):
   )
 
   @parameterized.named_parameters(
-      dict(
-          testcase_name="single_document",
-          documents=[
+      {
+          "testcase_name": "single_document",
+          "documents": [
               {"text": _FIXED_DOCUMENT_CONTENT, "document_id": "doc1"},
           ],
-          expected_result=[
+          "expected_result": [
               dataclasses.replace(
                   _ANNOTATED_DOCUMENT,
                   document_id="doc1",
               ),
           ],
-      ),
-      dict(
-          testcase_name="multiple_documents",
-          documents=[
+      },
+      {
+          "testcase_name": "multiple_documents",
+          "documents": [
               {"text": _FIXED_DOCUMENT_CONTENT, "document_id": "doc1"},
               {"text": _FIXED_DOCUMENT_CONTENT, "document_id": "doc2"},
           ],
-          expected_result=[
+          "expected_result": [
               dataclasses.replace(
                   _ANNOTATED_DOCUMENT,
                   document_id="doc1",
@@ -663,19 +659,19 @@ class AnnotatorMultipleDocumentTest(parameterized.TestCase):
                   document_id="doc2",
               ),
           ],
-      ),
-      dict(
-          testcase_name="zero_documents",
-          documents=[],
-          expected_result=[],
-      ),
-      dict(
-          testcase_name="multiple_documents_same_batch",
-          documents=[
+      },
+      {
+          "testcase_name": "zero_documents",
+          "documents": [],
+          "expected_result": [],
+      },
+      {
+          "testcase_name": "multiple_documents_same_batch",
+          "documents": [
               {"text": _FIXED_DOCUMENT_CONTENT, "document_id": "doc1"},
               {"text": _FIXED_DOCUMENT_CONTENT, "document_id": "doc2"},
           ],
-          expected_result=[
+          "expected_result": [
               dataclasses.replace(
                   _ANNOTATED_DOCUMENT,
                   document_id="doc1",
@@ -685,8 +681,8 @@ class AnnotatorMultipleDocumentTest(parameterized.TestCase):
                   document_id="doc2",
               ),
           ],
-          batch_length=10,
-      ),
+          "batch_length": 10,
+      },
   )
   def test_annotate_documents(
       self,
@@ -738,35 +734,35 @@ class AnnotatorMultipleDocumentTest(parameterized.TestCase):
 
     self.assertLen(actual_annotations, len(expected_result))
     for actual_annotation, expected_annotation in zip(
-        actual_annotations, expected_result
+        actual_annotations, expected_result, strict=False
     ):
       self.assertDataclassEqual(expected_annotation, actual_annotation)
 
     self.assertGreaterEqual(mock_language_model.infer.call_count, 0)
 
   @parameterized.named_parameters(
-      dict(
-          testcase_name="same_document_id_contiguous",
-          documents=[
+      {
+          "testcase_name": "same_document_id_contiguous",
+          "documents": [
               {"text": _FIXED_DOCUMENT_CONTENT, "document_id": "doc1"},
               {"text": _FIXED_DOCUMENT_CONTENT, "document_id": "doc1"},
           ],
-          expected_exception=exceptions.InvalidDocumentError,
-      ),
-      dict(
-          testcase_name="same_document_id_separated",
-          documents=[
+          "expected_exception": exceptions.InvalidDocumentError,
+      },
+      {
+          "testcase_name": "same_document_id_separated",
+          "documents": [
               {"text": _FIXED_DOCUMENT_CONTENT, "document_id": "doc1"},
               {"text": _FIXED_DOCUMENT_CONTENT, "document_id": "doc2"},
               {"text": _FIXED_DOCUMENT_CONTENT, "document_id": "doc1"},
           ],
-          expected_exception=exceptions.InvalidDocumentError,
-      ),
+          "expected_exception": exceptions.InvalidDocumentError,
+      },
   )
   def test_annotate_documents_exceptions(
       self,
       documents: Sequence[dict[str, str]],
-      expected_exception: Type[exceptions.InvalidDocumentError],
+      expected_exception: type[exceptions.InvalidDocumentError],
       batch_length: int = 1,
   ):
     mock_language_model = self.enter_context(
@@ -989,15 +985,15 @@ class MultiPassHelperFunctionsTest(parameterized.TestCase):
   """Tests for multi-pass helper functions."""
 
   @parameterized.named_parameters(
-      dict(
-          testcase_name="empty_list",
-          all_extractions=[],
-          expected_count=0,
-          expected_classes=[],
-      ),
-      dict(
-          testcase_name="single_pass",
-          all_extractions=[[
+      {
+          "testcase_name": "empty_list",
+          "all_extractions": [],
+          "expected_count": 0,
+          "expected_classes": [],
+      },
+      {
+          "testcase_name": "single_pass",
+          "all_extractions": [[
               data.Extraction(
                   "class1", "text1", char_interval=data.CharInterval(0, 5)
               ),
@@ -1005,12 +1001,12 @@ class MultiPassHelperFunctionsTest(parameterized.TestCase):
                   "class2", "text2", char_interval=data.CharInterval(10, 15)
               ),
           ]],
-          expected_count=2,
-          expected_classes=["class1", "class2"],
-      ),
-      dict(
-          testcase_name="non_overlapping_passes",
-          all_extractions=[
+          "expected_count": 2,
+          "expected_classes": ["class1", "class2"],
+      },
+      {
+          "testcase_name": "non_overlapping_passes",
+          "all_extractions": [
               [
                   data.Extraction(
                       "class1", "text1", char_interval=data.CharInterval(0, 5)
@@ -1022,12 +1018,12 @@ class MultiPassHelperFunctionsTest(parameterized.TestCase):
                   )
               ],
           ],
-          expected_count=2,
-          expected_classes=["class1", "class2"],
-      ),
-      dict(
-          testcase_name="overlapping_passes_first_wins",
-          all_extractions=[
+          "expected_count": 2,
+          "expected_classes": ["class1", "class2"],
+      },
+      {
+          "testcase_name": "overlapping_passes_first_wins",
+          "all_extractions": [
               [
                   data.Extraction(
                       "class1", "text1", char_interval=data.CharInterval(0, 10)
@@ -1042,12 +1038,12 @@ class MultiPassHelperFunctionsTest(parameterized.TestCase):
                   ),  # No overlap
               ],
           ],
-          expected_count=2,
-          expected_classes=[
+          "expected_count": 2,
+          "expected_classes": [
               "class1",
               "class3",
           ],  # class2 excluded due to overlap
-      ),
+      },
   )
   def test_merge_non_overlapping_extractions(
       self, all_extractions, expected_count, expected_classes
@@ -1061,58 +1057,58 @@ class MultiPassHelperFunctionsTest(parameterized.TestCase):
       self.assertCountEqual(extraction_classes, expected_classes)
 
   @parameterized.named_parameters(
-      dict(
-          testcase_name="overlapping_intervals",
-          ext1=data.Extraction(
+      {
+          "testcase_name": "overlapping_intervals",
+          "ext1": data.Extraction(
               "class1", "text1", char_interval=data.CharInterval(0, 10)
           ),
-          ext2=data.Extraction(
+          "ext2": data.Extraction(
               "class2", "text2", char_interval=data.CharInterval(5, 15)
           ),
-          expected=True,
-      ),
-      dict(
-          testcase_name="non_overlapping_intervals",
-          ext1=data.Extraction(
+          "expected": True,
+      },
+      {
+          "testcase_name": "non_overlapping_intervals",
+          "ext1": data.Extraction(
               "class1", "text1", char_interval=data.CharInterval(0, 5)
           ),
-          ext2=data.Extraction(
+          "ext2": data.Extraction(
               "class2", "text2", char_interval=data.CharInterval(10, 15)
           ),
-          expected=False,
-      ),
-      dict(
-          testcase_name="adjacent_intervals",
-          ext1=data.Extraction(
+          "expected": False,
+      },
+      {
+          "testcase_name": "adjacent_intervals",
+          "ext1": data.Extraction(
               "class1", "text1", char_interval=data.CharInterval(0, 5)
           ),
-          ext2=data.Extraction(
+          "ext2": data.Extraction(
               "class2", "text2", char_interval=data.CharInterval(5, 10)
           ),
-          expected=False,
-      ),
-      dict(
-          testcase_name="none_interval_first",
-          ext1=data.Extraction("class1", "text1", char_interval=None),
-          ext2=data.Extraction(
+          "expected": False,
+      },
+      {
+          "testcase_name": "none_interval_first",
+          "ext1": data.Extraction("class1", "text1", char_interval=None),
+          "ext2": data.Extraction(
               "class2", "text2", char_interval=data.CharInterval(5, 15)
           ),
-          expected=False,
-      ),
-      dict(
-          testcase_name="none_interval_second",
-          ext1=data.Extraction(
+          "expected": False,
+      },
+      {
+          "testcase_name": "none_interval_second",
+          "ext1": data.Extraction(
               "class1", "text1", char_interval=data.CharInterval(0, 5)
           ),
-          ext2=data.Extraction("class2", "text2", char_interval=None),
-          expected=False,
-      ),
-      dict(
-          testcase_name="both_none_intervals",
-          ext1=data.Extraction("class1", "text1", char_interval=None),
-          ext2=data.Extraction("class2", "text2", char_interval=None),
-          expected=False,
-      ),
+          "ext2": data.Extraction("class2", "text2", char_interval=None),
+          "expected": False,
+      },
+      {
+          "testcase_name": "both_none_intervals",
+          "ext1": data.Extraction("class1", "text1", char_interval=None),
+          "ext2": data.Extraction("class2", "text2", char_interval=None),
+          "expected": False,
+      },
   )
   def test_extractions_overlap(self, ext1, ext2, expected):
     """Test overlap detection between extractions."""

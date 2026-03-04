@@ -124,6 +124,12 @@ extend-select = [
     "NPY",      # Some numpy-specific things
 ]
 
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = [
+    "RUF001",   # Ambiguous Unicode is intentional test data (en-dashes, Cyrillic, etc.)
+    "RUF012",   # Mutable class-level defaults are fine in test classes
+]
+
 [tool.importlinter]
 root_package = "langextract"
 

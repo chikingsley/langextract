@@ -34,7 +34,6 @@ __all__ = [
     "exceptions",
     "extract",
     "factory",
-    "inference",
     "io",
     "plugins",
     "prompting",
@@ -68,7 +67,6 @@ _LAZY_MODULES = {
     "debug_utils": "langextract.core.debug_utils",
     "exceptions": "langextract.exceptions",
     "factory": "langextract.factory",
-    "inference": "langextract.inference",
     "io": "langextract.io",
     "progress": "langextract.progress",
     "prompting": "langextract.prompting",
@@ -79,7 +77,6 @@ _LAZY_MODULES = {
     "visualization": "langextract.visualization",
     "core": "langextract.core",
     "plugins": "langextract.plugins",
-    "registry": "langextract.registry",
 }
 
 

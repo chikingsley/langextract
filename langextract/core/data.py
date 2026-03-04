@@ -41,7 +41,6 @@ __all__ = [
 
 class AlignmentStatus(enum.Enum):
     MATCH_EXACT = "match_exact"
-    MATCH_GREATER = "match_greater"
     MATCH_LESSER = "match_lesser"
     MATCH_FUZZY = "match_fuzzy"
 

@@ -252,35 +252,6 @@ def get_model_info(language_model: Any) -> str | None:
     return None
 
 
-def format_extraction_stats(current_chars: int, processed_chars: int) -> str:
-    """Format extraction progress statistics with colors.
-
-    Args:
-      current_chars: Number of characters in current batch.
-      processed_chars: Total number of characters processed so far.
-
-    Returns:
-      Formatted string with colored statistics.
-    """
-    current_str = f"{GREEN}{current_chars:,}{RESET}"
-    processed_str = f"{GREEN}{processed_chars:,}{RESET}"
-    return f"current={current_str} chars, processed={processed_str} chars"
-
-
-def create_extraction_postfix(current_chars: int, processed_chars: int) -> str:
-    """Create a formatted postfix string for extraction progress.
-
-    Args:
-      current_chars: Number of characters in current batch.
-      processed_chars: Total number of characters processed so far.
-
-    Returns:
-      Formatted string with statistics.
-    """
-    current_str = f"{GREEN}{current_chars:,}{RESET}"
-    processed_str = f"{GREEN}{processed_chars:,}{RESET}"
-    return f"current={current_str} chars, processed={processed_str} chars"
-
 
 def format_extraction_progress(
     model_info: str | None,

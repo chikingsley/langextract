@@ -245,6 +245,17 @@ def extract(
             "max_workers": max_workers,
         }
 
+        # TODO(v2.0.0): Remove gemini_schema parameter
+        if "gemini_schema" in (language_model_params or {}):
+            warnings.warn(
+                "'gemini_schema' is deprecated. Schema constraints are now "
+                "automatically handled. This parameter will be ignored.",
+                FutureWarning,
+                stacklevel=2,
+            )
+            language_model_params = dict(language_model_params or {})
+            language_model_params.pop("gemini_schema", None)
+
         base_lm_kwargs.update(language_model_params or {})
         filtered_kwargs = {k: v for k, v in base_lm_kwargs.items() if v is not None}
 

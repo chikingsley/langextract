@@ -1,0 +1,22 @@
+Patient: John Smith, DOB: 03/15/1965, MRN: 123456
+
+Chief Complaint: Follow-up for hypertension and type 2 diabetes mellitus.
+
+History of Present Illness:
+Mr. Smith is a 60-year-old male presenting for routine follow-up. He reports good compliance
+with his medication regimen. Blood pressure has been well-controlled at home readings of
+125/80 mmHg. He denies any episodes of hypoglycemia. His last HbA1c was 7.2%.
+
+Current Medications:
+1. Lisinopril 20mg daily for hypertension
+2. Metformin 1000mg twice daily for type 2 diabetes
+3. Atorvastatin 40mg at bedtime for hyperlipidemia
+4. Aspirin 81mg daily for cardiovascular prophylaxis
+
+Assessment and Plan:
+- Hypertension: Well-controlled on current regimen. Continue Lisinopril 20mg daily.
+- Type 2 Diabetes: HbA1c at goal. Continue Metformin 1000mg BID.
+- Hyperlipidemia: Continue Atorvastatin 40mg QHS. Recheck lipid panel in 3 months.
+- Follow-up in 3 months.
+
+Signed: Dr. Jane Wilson, MD

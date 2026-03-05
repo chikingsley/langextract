@@ -343,14 +343,14 @@ result = lx.extract(
     text_or_documents=input_text,
     prompt_description=prompt,
     examples=examples,
-    model_id="gemma2:2b",  # Automatically selects Ollama provider
+    model_id="gemma3:latest",  # Automatically selects Ollama provider
     base_url="http://localhost:11434",
     fence_output=False,
     use_schema_constraints=False
 )
 ```
 
-**Quick setup:** Install Ollama from [ollama.com](https://ollama.com/), run `ollama pull gemma2:2b`, then `ollama serve`.
+**Quick setup:** Install Ollama from [ollama.com](https://ollama.com/), run `ollama pull gemma3:latest`, then `ollama serve`.
 
 For detailed installation, Docker setup, and examples, see [`examples/ollama/`](examples/ollama/).
 
@@ -410,7 +410,7 @@ uv run tox  # runs ruff + pytest across configured environments
 If you have Ollama installed locally, you can run integration tests:
 
 ```bash
-# Test Ollama integration (requires Ollama running with gemma2:2b model)
+# Test Ollama integration (requires Ollama running with gemma3:latest model)
 uv run tox -e ollama-integration
 ```
 

@@ -19,14 +19,11 @@ import concurrent.futures
 import dataclasses
 import logging
 from collections.abc import Iterator, Sequence
-from typing import TYPE_CHECKING, Any, Final, cast
+from typing import Any, Final
 
 from langextract.core import base_model, data, exceptions, schema
 from langextract.core import types as core_types
 from langextract.providers import gemini_batch, patterns, router, schemas
-
-if TYPE_CHECKING:
-    from google.genai import types as genai_types
 
 _DEFAULT_MODEL_ID = "gemini-2.5-flash-lite"
 _DEFAULT_LOCATION = "us-central1"
@@ -217,7 +214,7 @@ class GeminiLanguageModel(base_model.BaseLanguageModel):
             response = self._client.models.generate_content(
                 model=self.model_id,
                 contents=prompt,
-                config=cast("genai_types.GenerateContentConfigDict", config),
+                config=config,
             )
 
             usage = None

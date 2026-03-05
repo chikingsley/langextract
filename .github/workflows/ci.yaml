@@ -168,8 +168,8 @@ jobs:
         with:
           files: |
             langextract/providers/**
+            langextract/plugins.py
             langextract/factory.py
-            langextract/inference.py
             tests/provider_plugin_test.py
             pyproject.toml
             .github/workflows/ci.yaml
@@ -215,7 +215,9 @@ jobs:
         uses: tj-actions/changed-files@v46
         with:
           files: |
-            langextract/inference.py
+            langextract/providers/ollama.py
+            langextract/extraction.py
+            langextract/factory.py
             examples/ollama/**
             tests/test_ollama_integration.py
             .github/workflows/ci.yaml
@@ -242,8 +244,8 @@ jobs:
             sleep 3
           done
 
-      - name: Pull gemma2 model
-        run: docker exec ollama ollama pull gemma2:2b || true
+      - name: Pull gemma3 model
+        run: docker exec ollama ollama pull gemma3:latest || true
 
       - name: Install tox
         run: |

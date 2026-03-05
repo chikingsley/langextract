@@ -148,14 +148,19 @@ class BaseLanguageModel(abc.ABC):
 
         Args:
           prompts: List of prompts to process.
-          batch_size: Batch size (currently unused, for future optimization).
+          batch_size: Number of prompts sent per infer() call.
 
         Returns:
           List of lists of ScoredOutput objects.
         """
+        if batch_size <= 0:
+            raise ValueError("batch_size must be > 0")
+
         results = []
-        for output in self.infer(prompts):
-            results.append(list(output))
+        for start_idx in range(0, len(prompts), batch_size):
+            prompt_batch = prompts[start_idx : start_idx + batch_size]
+            for output in self.infer(prompt_batch):
+                results.append(list(output))
         return results
 
     def parse_output(self, output: str) -> Any:

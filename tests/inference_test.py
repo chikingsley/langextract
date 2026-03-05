@@ -80,6 +80,41 @@ class TestBaseLanguageModel(absltest.TestCase):
         "merge_kwargs should work even without _extra_kwargs attribute",
     )
 
+  def test_infer_batch_respects_batch_size(self):
+    """infer_batch should chunk prompts according to batch_size."""
+
+    class TestModel(base_model.BaseLanguageModel):  # pylint: disable=too-few-public-methods
+
+      def __init__(self):
+        super().__init__()
+        self.calls = []
+
+      def infer(self, batch_prompts, **kwargs):
+        self.calls.append(tuple(batch_prompts))
+        for prompt in batch_prompts:
+          yield [types.ScoredOutput(score=1.0, output=prompt)]
+
+    model = TestModel()
+    prompts = ["p1", "p2", "p3", "p4", "p5"]
+
+    outputs = model.infer_batch(prompts, batch_size=2)
+
+    self.assertEqual(model.calls, [("p1", "p2"), ("p3", "p4"), ("p5",)])
+    self.assertEqual(len(outputs), 5)
+    self.assertEqual([row[0].output for row in outputs], prompts)
+
+  def test_infer_batch_rejects_non_positive_batch_size(self):
+    """infer_batch should reject non-positive batch sizes."""
+
+    class TestModel(base_model.BaseLanguageModel):  # pylint: disable=too-few-public-methods
+
+      def infer(self, batch_prompts, **kwargs):
+        return iter([])
+
+    model = TestModel()
+    with self.assertRaisesRegex(ValueError, "batch_size must be > 0"):
+      model.infer_batch(["x"], batch_size=0)
+
 
 class TestOllamaLanguageModel(absltest.TestCase):
 
@@ -188,6 +223,31 @@ class TestOllamaLanguageModel(absltest.TestCase):
     self.assertEqual(json_payload["options"]["num_thread"], 8)
     # timeout is passed to httpx.post, not in the JSON payload
     self.assertEqual(call_args.kwargs["timeout"], 300.0)
+
+  @mock.patch("langextract.providers.ollama.OllamaLanguageModel._ollama_query")
+  def test_ollama_uses_thinking_when_response_empty_in_json_mode(
+      self, mock_ollama_query
+  ):
+    """Reasoning models can return JSON in `thinking` with empty `response`."""
+    mock_ollama_query.return_value = {
+        "response": "",
+        "thinking": '{"status":"ok"}',
+        "prompt_eval_count": 10,
+        "eval_count": 5,
+    }
+
+    model = ollama.OllamaLanguageModel(
+        model_id="qwen3.5:4b",
+        base_url="http://localhost:11434",
+        format_type=data.FormatType.JSON,
+    )
+    results = list(model.infer(["Return JSON with status key"]))
+
+    self.assertEqual(results[0][0].output, '{"status":"ok"}')
+    self.assertEqual(
+        results[0][0].usage,
+        {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15},
+    )
 
   @mock.patch("httpx.post")
   def test_ollama_stop_and_top_p_passthrough(self, mock_post):

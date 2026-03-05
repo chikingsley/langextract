@@ -36,7 +36,7 @@ Usage with extract():
     # Basic usage with Ollama
     result = lx.extract(
         text_or_documents="Isaac Asimov was a prolific science fiction writer.",
-        model_id="gemma2:2b",
+        model_id="gemma3:latest",
         prompt_description="Extract the person's name and field",
         examples=[example],
     )
@@ -46,7 +46,7 @@ Direct provider instantiation (when model ID conflicts with other providers):
 
     # Create Ollama provider directly
     model = OllamaLanguageModel(
-        model_id="gemma2:2b",
+        model_id="gemma3:latest",
         base_url="http://localhost:11434",  # optional, uses default if not specified
     )
 
@@ -64,19 +64,19 @@ Using pre-configured FormatHandler for manual control:
     # Use the pre-configured Ollama FormatHandler
     result = lx.extract(
         text_or_documents="Your text here",
-        model_id="gemma2:2b",
+        model_id="gemma3:latest",
         prompt_description="Extract information",
         examples=[example],
         resolver_params={'format_handler': OLLAMA_FORMAT_HANDLER}
     )
 
 Supported model ID formats:
-    - Standard Ollama: llama3.2:1b, gemma2:2b, mistral:7b, qwen2.5:7b, etc.
+    - Standard Ollama: llama3.2:1b, gemma3:latest, mistral:7b, qwen3.5:4b, etc.
     - Hugging Face style: meta-llama/Llama-3.2-1B-Instruct, google/gemma-2b, etc.
 
 Prerequisites:
     1. Install Ollama: https://ollama.ai
-    2. Pull the model: ollama pull gemma2:2b
+    2. Pull the model: ollama pull gemma3:latest
     3. Ollama server will start automatically when you use extract()
 """
 
@@ -258,7 +258,19 @@ class OllamaLanguageModel(base_model.BaseLanguageModel):
                     ),
                 }
 
-                yield [core_types.ScoredOutput(score=1.0, output=response["response"], usage=usage)]
+                output_text = response.get("response", "")
+                # Some reasoning models (for example qwen3.5) can emit JSON in
+                # `thinking` while returning an empty `response` in JSON mode.
+                if (
+                    self.format_type == core_types.FormatType.JSON
+                    and isinstance(output_text, str)
+                    and not output_text.strip()
+                ):
+                    thinking_text = response.get("thinking")
+                    if isinstance(thinking_text, str) and thinking_text.strip():
+                        output_text = thinking_text
+
+                yield [core_types.ScoredOutput(score=1.0, output=output_text, usage=usage)]
             except Exception as e:
                 raise exceptions.InferenceRuntimeError(
                     f"Ollama API error: {e!s}", original=e

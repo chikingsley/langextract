@@ -4,6 +4,10 @@ import os
 import pathlib
 
 import pytest
+from dotenv import load_dotenv
+
+# Load .env from project root so API keys are available for live tests
+load_dotenv(pathlib.Path(__file__).parent.parent / ".env")
 
 FIXTURES_DIR = pathlib.Path(__file__).parent / "fixtures"
 

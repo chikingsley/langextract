@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING, Any
 
 from langextract.core import base_model, data, exceptions, schema
 from langextract.core import types as core_types
-from langextract.providers import patterns, router
+from langextract.providers import patterns, router, schemas
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Sequence
@@ -36,6 +36,15 @@ class OpenAILanguageModel(base_model.BaseLanguageModel):
     """Language model inference using OpenAI's API with structured output."""
 
     ENV_API_KEY_NAMES = ("OPENAI_API_KEY",)
+
+    @classmethod
+    def get_schema_class(cls) -> type[schema.BaseSchema] | None:
+        """Return the OpenAISchema class for structured output support.
+
+        Returns:
+          The OpenAISchema class that supports strict schema constraints.
+        """
+        return schemas.openai.OpenAISchema
 
     model_id: str = "gpt-4o-mini"
     api_key: str | None = None
@@ -167,6 +176,17 @@ class OpenAILanguageModel(base_model.BaseLanguageModel):
             ]:
                 if (v := config.get(key)) is not None:
                     api_params[key] = v
+
+            # OpenRouter needs require_parameters to enforce json_schema routing
+            response_fmt = api_params.get("response_format")
+            if (
+                self.base_url
+                and "openrouter" in self.base_url
+                and isinstance(response_fmt, dict)
+                and response_fmt.get("type") == "json_schema"
+            ):
+                extra = api_params.setdefault("extra_body", {})
+                extra.setdefault("provider", {})["require_parameters"] = True
 
             response = self._client.chat.completions.create(**api_params)
 

@@ -62,10 +62,12 @@ ollama = "langextract.providers.ollama:OllamaLanguageModel"
 openai = "langextract.providers.openai:OpenAILanguageModel"
 
 [tool.hatch.build.targets.wheel]
-packages = ["langextract"]
+packages = ["langextract", "pdfextract"]
 exclude = [
     "langextract/**/*.gif",
     "langextract/**/*.svg",
+    "pdfextract/**/*.gif",
+    "pdfextract/**/*.svg",
 ]
 
 [tool.hatch.build.targets.sdist]
@@ -87,6 +89,7 @@ markers = [
     "live_api: marks tests as requiring live API access",
     "vertex_ai: marks tests requiring Vertex AI credentials",
     "integration: marks integration tests that test multiple components together",
+    "requires_pip: marks tests that install packages during execution",
 ]
 filterwarnings = [
     "ignore:'_UnionGenericAlias' is deprecated:DeprecationWarning",
@@ -162,4 +165,5 @@ dev = [
     "tox>=4.0.0",
     "ty>=0.0.17",
     "types-regex>=2023.0.0",
+    "vulture>=2.11",
 ]

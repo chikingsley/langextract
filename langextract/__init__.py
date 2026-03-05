@@ -24,7 +24,9 @@ import sys
 from typing import Any
 
 from langextract import visualization
+from langextract.extraction import PdfExtractionResult
 from langextract.extraction import extract as extract_func
+from langextract.extraction import extract_pdf as extract_pdf_func
 
 __all__ = [
     "annotation",
@@ -33,6 +35,7 @@ __all__ = [
     "data",
     "exceptions",
     "extract",
+    "extract_pdf",
     "factory",
     "io",
     "plugins",
@@ -50,6 +53,11 @@ _CACHE: dict[str, Any] = {}
 def extract(*args: Any, **kwargs: Any):
     """Top-level API: lx.extract(...)."""
     return extract_func(*args, **kwargs)
+
+
+def extract_pdf(*args: Any, **kwargs: Any) -> PdfExtractionResult:
+    """Top-level API: lx.extract_pdf(path, ...)."""
+    return extract_pdf_func(*args, **kwargs)
 
 
 def visualize(*args: Any, **kwargs: Any):

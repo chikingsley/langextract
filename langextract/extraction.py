@@ -15,9 +15,10 @@
 """Main extraction API for LangExtract."""
 
 
+import dataclasses
 import typing
 import warnings
-from typing import cast
+from typing import Any, cast
 
 from langextract import annotation, factory, io, prompting, resolver
 from langextract import prompt_validation as pv
@@ -27,6 +28,9 @@ from langextract.core import tokenizer as tokenizer_lib
 
 if typing.TYPE_CHECKING:
     from collections.abc import Iterable
+    from pathlib import Path
+
+    from pdfextract.types import DocumentResult
 
 
 def extract(
@@ -336,3 +340,85 @@ def extract(
         **alignment_kwargs,
     )
     return list(result)
+
+
+@dataclasses.dataclass
+class PdfExtractionResult:
+    """Result of extract_pdf combining LLM extractions with PDF spatial data.
+
+    Attributes:
+        document: The AnnotatedDocument from LLM extraction.
+        pdf_result: The DocumentResult from pdfextract with word_map and
+            page-level metadata. Use ``pdf_result.bbox_for_range(start, end)``
+            to project an extraction's ``char_interval`` back to PDF
+            coordinates.
+    """
+
+    document: data.AnnotatedDocument
+    pdf_result: DocumentResult
+
+
+def extract_pdf(
+    path: str | Path,
+    *,
+    ocr_dpi: int = 300,
+    force_ocr: bool = False,
+    skip_ocr: bool = False,
+    ocr_backend: str = "rapidocr",
+    ocr_backend_options: dict[str, Any] | None = None,
+    **extract_kwargs: Any,
+) -> PdfExtractionResult:
+    """Extract structured information from a PDF file.
+
+    Runs the pdfextract pipeline (native text + OCR fallback) to get text
+    with word-level bounding boxes, then passes the text through
+    ``lx.extract()`` for LLM-based structured extraction. The result
+    combines both, so extractions can be projected back to PDF page
+    coordinates via the word map.
+
+    Args:
+        path: Path to the PDF file.
+        ocr_dpi: Resolution for OCR page rendering.
+        force_ocr: OCR every page regardless of native text quality.
+        skip_ocr: Never run OCR.
+        ocr_backend: OCR backend name (``rapidocr``, ``ollama``, ``vllm``).
+        ocr_backend_options: Provider-specific options for OCR backend.
+        **extract_kwargs: All remaining keyword arguments are forwarded to
+            :func:`extract` (e.g. ``model_id``, ``prompt_description``,
+            ``examples``, ``api_key``, etc.).
+
+    Returns:
+        PdfExtractionResult with the AnnotatedDocument and the
+        DocumentResult for coordinate mapping.
+
+    Raises:
+        ImportError: If pdfextract is not installed.
+    """
+    try:
+        from pdfextract import extract_document
+    except ImportError as e:
+        raise ImportError(
+            "pdfextract package is required for extract_pdf(). "
+            "It should be included with langextract — if missing, "
+            "check your installation."
+        ) from e
+
+    pdf_result = extract_document(
+        path,
+        ocr_dpi=ocr_dpi,
+        force_ocr=force_ocr,
+        skip_ocr=skip_ocr,
+        ocr_backend=ocr_backend,
+        ocr_backend_options=ocr_backend_options,
+    )
+
+    # Disable URL fetching — the text is already extracted, not a URL
+    extract_kwargs.setdefault("fetch_urls", False)
+
+    annotated = extract(pdf_result.full_text, **extract_kwargs)
+
+    # extract() returns a single AnnotatedDocument for string input
+    if isinstance(annotated, list):
+        annotated = annotated[0]
+
+    return PdfExtractionResult(document=annotated, pdf_result=pdf_result)
